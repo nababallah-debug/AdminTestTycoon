@@ -188,27 +188,22 @@ function worldUnlocked(w){return w===0||BUILDING_ROLES.every((_,b)=>(state.build
 function worldProgress(w){return BUILDING_ROLES.reduce((a,_,b)=>a+(state.buildings[w+'-'+b]||0),0)}
 function worldFactor(w){const p=Math.min(1,worldProgress(w)/(BUILDING_ROLES.length*20));return 1+w*.22+p*(0.6+w*.06)}
 function cost(w,b){
-  const n=state.buildings[w+'-'+b]||0;
-  const planetInflation=Math.pow(worldFactor(w),1.15);
-  const sectorScale=Math.pow(5.5,b);
-  const levelScale=Math.pow(1.16,n);
-  // V2.4: minimum investment is deliberately much higher than its first-second income.
-  return Math.ceil((1500*Math.pow(28,w)*sectorScale*levelScale)*planetInflation*eventMult('cost'));
+ const n=state.buildings[w+'-'+b]||0;
+ // V2.5 : seuls les 4 premiers bâtiments du premier secteur ont un équilibrage spécial.
+ if(w===0 && b<4){const bases=[1500,6000,24000,96000];return Math.ceil(bases[b]*Math.pow(1.16,n)*eventMult('cost'));}
+ const planetInflation=Math.pow(worldFactor(w),1.15);
+ return Math.ceil((500*Math.pow(28,w)*Math.pow(5.5,b)*Math.pow(1.16,n))*planetInflation/5*eventMult('cost'));
 }
 function prestigeMult(){return 1+.18*state.prestige}
 function techOwned(id){return !!state.research[id]}
 function prodMult(){let m=1+state.prestige*.18;for(const br of BRANCH_ORDER)BRANCHES[br].forEach(t=>{if(techOwned(t[0])&&['automation','energy'].includes(br))m*=br==='automation'?1.25:1.2});return m}
 function clickPower(){let m=100*prestigeMult();if(techOwned('laser'))m*=1.5;if(techOwned('plasma'))m*=1.8;if(techOwned('abyss'))m*=2;if(techOwned('stellar'))m*=3;if(techOwned('voidmine'))m*=5;return m*eventMult('click')*eventMult('income')}
 function baseProd(w,b){
-  // V2.4 economy: lower early output and smoother progression between buildings.
-  // Existing building levels are preserved; only their future income is recalculated.
-  const planetScale=Math.pow(3.0,w);
-  const buildingScale=Math.pow(1.85,b);
-  const earlyPenalty=Math.max(.72,1-b*.025);
-  const lateBoost=w>=12?Math.pow(1.13,w-11):1;
-  return 20*(1+.12*w)*planetScale*buildingScale*earlyPenalty*lateBoost;
+ // V2.5 : économie V2.3 inchangée partout sauf les 4 premiers bâtiments du premier secteur.
+ if(w===0 && b<4){return [20,75,280,1050][b];}
+ return 100*(1.1+.18*w)*Math.pow(3.2,w)*Math.pow(2,b)*Math.max(1,2-b*.08)*(w>=12?Math.pow(1.16,w-11):1);
 }
-function autoRate(){let r=0;WORLDS.forEach((_,w)=>BUILDING_ROLES.forEach((__,b)=>r+=(state.buildings[w+'-'+b]||0)*baseProd(w,b)*WORLDS[w][3]));return r*prestigeMult()*prodMult()*eventMult('prod')*eventMult('income')}
+function autoRate(){let r=0;WORLDS.forEach((_,w)=>BUILDING_ROLES.forEach((__,b)=>r+=(state.buildings[w+'-'+b]||0)*baseProd(w,b)*WORLDS[w][3]));return r*prestigeMult()*prodMult()*3*eventMult('prod')*eventMult('income')}
 function earn(x){if(!Number.isFinite(x)||x<=0)return;state.money+=x;state.runTotal+=x;state.lifetimeTotal+=x;state.xp+=Math.max(1,Math.floor(Math.log10(Math.max(10,x))+2));state.level=Math.floor(Math.sqrt(state.xp/80))+1}
 function spend(x){state.money-=x;state.spent+=x}
 function toast(t){const e=document.getElementById('toast');if(!e)return;e.textContent=t;e.classList.add('toast-show');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('toast-show'),2200)}
@@ -224,7 +219,7 @@ function render(){
 function renderBuildings(){
  const box=document.getElementById('buildingList');if(!box)return;const w=WORLDS[selectedWorld];
  if(!worldUnlocked(selectedWorld)){box.innerHTML='<div class="panel"><b>SECTEUR VERROUILLÉ</b><p class="hint">Termine la colonie précédente : au moins 1 unité de chaque bâtiment.</p></div>';return}
- const list=buildingSet(selectedWorld);box.innerHTML=`<div class="planet-building-head"><span>${w[0]}</span><div><strong>${w[1]}</strong><small>Les modèles changent selon le secteur. Les niveaux, prix et revenus de ta sauvegarde restent inchangés.</small></div><b>×${w[3]}</b></div>`+list.map((x,b)=>{const n=state.buildings[selectedWorld+'-'+b]||0,c=cost(selectedWorld,b),income=baseProd(selectedWorld,b)*w[3]*prestigeMult()*prodMult()*eventMult('prod')*eventMult('income');return `<article class="building"><div class="building-icon">${x[1]}</div><div class="building-info"><strong>${x[0]}</strong><small>Niveau ${n} · +${fmt(income)}/s</small><em>Prochain coût · ${fmt(c)}</em></div><button class="buy" data-buy="${b}" ${state.money<c?'disabled':''}>ACHETER</button></article>`}).join('');
+ const list=buildingSet(selectedWorld);box.innerHTML=`<div class="planet-building-head"><span>${w[0]}</span><div><strong>${w[1]}</strong><small>Les modèles changent selon le secteur. Les niveaux, prix et revenus de ta sauvegarde restent inchangés.</small></div><b>×${w[3]}</b></div>`+list.map((x,b)=>{const n=state.buildings[selectedWorld+'-'+b]||0,c=cost(selectedWorld,b),income=baseProd(selectedWorld,b)*w[3]*prestigeMult()*prodMult()*3*eventMult('prod')*eventMult('income');return `<article class="building"><div class="building-icon">${x[1]}</div><div class="building-info"><strong>${x[0]}</strong><small>Niveau ${n} · +${fmt(income)}/s</small><em>Prochain coût · ${fmt(c)}</em></div><button class="buy" data-buy="${b}" ${state.money<c?'disabled':''}>ACHETER</button></article>`}).join('');
 }
 function renderMap(){
  const box=document.getElementById('galaxyMap');if(!box)return;box.innerHTML='<div class="map-grid-lines"></div><div class="galaxy-core">✦</div>';
@@ -329,5 +324,5 @@ document.addEventListener('visibilitychange',()=>{
 window.addEventListener('pagehide',()=>{state.lastAt=Date.now();save()});
 
 
-/* V2.4 mobile interaction guard: prevent accidental double-tap page zoom. */
+/* V2.5 mobile: prevent accidental double-tap page zoom while preserving scrolling. */
 document.addEventListener('dblclick',e=>e.preventDefault(),{passive:false});
