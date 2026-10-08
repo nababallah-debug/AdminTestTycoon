@@ -1,10 +1,10 @@
 const SUPABASE_URL='https://gvyeooqemajnvfbgnagv.supabase.co';
-const SUPABASE_KEY='sb_publishable_moYDSTJplgl9XPCiKR96b_CPt3MJ7z';
+const SUPABASE_KEY='sb_publishable_moYDSTJplgl9XPCiKR96bQ_CPt3MJ7z';
 const sb=window.supabase?.createClient?.(SUPABASE_URL,SUPABASE_KEY)||null;
 
 const KEY='space-mining-v2-test';
 const CLOUD_SYNC_MS=12000;
-let cloudBusy=false,lastCloudSync=0;
+let cloudBusy=false,lastCloudSync=0,lastLeaderboard=0,leaderboardBusy=false;
 const OLD_KEYS=['space-mining-v11','space-mining-v10','space-mining-v9','space-mining-v8','space-mining-v7','space-mining-v6','space-mining-v5','space-mining-v4','space-mining-v3','space-mining-v2'];
 
 const WORLDS=[
@@ -212,11 +212,13 @@ function autoRate(){let r=0;WORLDS.forEach((_,w)=>BUILDING_ROLES.forEach((__,b)=
 function earn(x){if(!Number.isFinite(x)||x<=0)return;state.money+=x;state.runTotal+=x;state.lifetimeTotal+=x;state.xp+=Math.max(1,Math.floor(Math.log10(Math.max(10,x))+2));state.level=Math.floor(Math.sqrt(state.xp/80))+1}
 function spend(x){state.money-=x;state.spent+=x}
 function toast(t){const e=document.getElementById('toast');if(!e)return;e.textContent=t;e.classList.add('toast-show');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('toast-show'),2200)}
-function nav(name){screen=name;document.querySelectorAll('.screen').forEach(x=>x.classList.toggle('active',x.dataset.screen===name));document.querySelectorAll('[data-nav]').forEach(x=>x.classList.toggle('active',x.dataset.nav===name));render()}
+function nav(name){screen=name;if(name==='account')loadLeaderboard(true);document.querySelectorAll('.screen').forEach(x=>x.classList.toggle('active',x.dataset.screen===name));document.querySelectorAll('[data-nav]').forEach(x=>x.classList.toggle('active',x.dataset.nav===name));render()}
 function hasTechAlert(){return BRANCH_ORDER.some(br=>BRANCHES[br].some((t,i)=>!techOwned(t[0])&&state.money>=t[2]&&(i===0||techOwned(BRANCHES[br][i-1][0]))))}
 function hasMissionAlert(){ensureDaily();ensureWeekly();ensureMissionState();const ds=dailySet();if(ds.some((d,i)=>!state.daily.claimed.includes(i)&&dailyValue(d)>=d[2]))return true;if(CAMPAIGN.some(m=>!state.campaignClaimed.includes(m[0])&&missionValue(m)>=m[3]))return true;if(WEEKLY.some((m,i)=>!state.weekly.claimed.includes(i)&&weeklyValue(m)>=m[3]))return true;return ACHIEVEMENTS.some(a=>!state.achievementClaimed.includes(a[0])&&achievementValue(a)>=a[4])}
 function hasSectorAlert(){for(let i=0;i<WORLDS.length;i++){if(i!==selectedWorld&&worldUnlocked(i))return true}return false}
-function hasPrestigeAlert(){const target=1e14*Math.pow(18,state.prestige);return state.runTotal>=target}
+function ascensionReady(){const allPlanets=BUILDING_ROLES.every((_,b)=>WORLDS.every((__,w)=>(state.buildings[w+'-'+b]||0)>=10));return allPlanets}
+function ascensionTarget(){return 1e14*Math.pow(18,state.prestige)}
+function hasPrestigeAlert(){return ascensionReady()&&state.runTotal>=ascensionTarget()}
 function setNavAlert(id,on){const el=document.getElementById(id);if(el)el.hidden=!on}
 function renderNavAlerts(){setNavAlert('navAlertSectors',hasSectorAlert());setNavAlert('navAlertTech',hasTechAlert());setNavAlert('navAlertMissions',hasMissionAlert());setNavAlert('navAlertPrestige',hasPrestigeAlert())}
 function render(){
@@ -275,13 +277,14 @@ function renderMissions(){
 }
 function missionHTML(id,title,type,need,reward,claimed,value){const done=value>=need;return `<article class="mission"><div class="mission-head"><strong>${claimed?'✓':done?'●':'○'} ${title}</strong><b>+${fmt(reward)}</b></div><small>${fmt(value)} / ${fmt(need)}</small><div class="bar"><i style="width:${Math.min(100,value/need*100)}%"></i></div><button class="${done&&!claimed?'primary':'secondary'}" data-claim="${id}" data-claim-type="${id[0]==='d'?'daily':id.startsWith('week')?'weekly':'campaign'}" ${done&&!claimed?'':'disabled'}>${claimed?'RÉCLAMÉ':done?'RÉCLAMER':'EN COURS'}</button></article>`}
 function renderDailyPreview(){const box=document.getElementById('dailyPreview');if(!box)return;ensureDaily();const ds=dailySet();box.innerHTML=ds.map((d,i)=>`<div class="daily-row"><span>${state.daily.claimed.includes(i)?'✓':'○'} ${d[1]}</span><b>+${fmt(DAILY_REWARDS[i])}</b></div>`).join('')}
-function renderPrestige(){const target=1e14*Math.pow(18,state.prestige);document.getElementById('prestigeBig').textContent='P'+state.prestige;document.getElementById('runTotal').textContent=fmt(state.runTotal);document.getElementById('prestigeTarget').textContent=fmt(target);document.getElementById('prestigeText').textContent=state.runTotal>=target?'Le seuil est atteint. Une nouvelle ascension est disponible.':'Continue à développer tes secteurs et ton empire pour atteindre le seuil.';document.getElementById('prestigeBtn').disabled=state.runTotal<target}
+function renderPrestige(){const target=1e14*Math.pow(18,state.prestige);document.getElementById('prestigeBig').textContent='P'+state.prestige;document.getElementById('runTotal').textContent=fmt(state.runTotal);document.getElementById('prestigeTarget').textContent=fmt(target);document.getElementById('prestigeText').textContent=state.runTotal>=target?'Le seuil est atteint. Une nouvelle ascension est disponible.':'Continue à développer tes secteurs et ton empire pour atteindre le seuil.';const ready=ascensionReady();document.getElementById('prestigeBtn').disabled=!ready||state.runTotal<target;const req=document.getElementById('ascensionRequirement');if(req)req.textContent=ready?'✅ Toutes les planètes ont 10 bâtiments de chaque.':'⛏️ Requis : 10 bâtiments de CHAQUE type sur les 32 planètes.'}
 function renderAccount(){
  const logged=!!state.account;
  document.getElementById('authLoggedOut').hidden=logged;
  document.getElementById('authLoggedIn').hidden=!logged;
  document.getElementById('cloudState').textContent=logged?(cloudBusy?'SYNC…':'CLOUD'):'LOCAL';
  if(logged){
+   loadLeaderboard();
    document.getElementById('profileName').textContent=state.account.username||'Mineur';
    document.getElementById('profileEmail').textContent=state.account.email||'';
    const status=document.getElementById('cloudStatus');if(status)status.textContent=cloudBusy?'Synchronisation…':'Sauvegarde cloud active';
@@ -353,6 +356,28 @@ async function loginAccount(){
   toast('✅ Connexion réussie · cloud synchronisé');
  }finally{accountBusy=false;renderAccount()}
 }
+async function recoverPassword(){
+ if(!sb)return;
+ const email=document.getElementById('emailInput').value.trim();
+ if(!email.includes('@')){toast('Entre ton e-mail pour recevoir le lien de récupération');return}
+ try{
+   const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.href.split('#')[0]});
+   if(error)throw error;
+   toast('📧 Lien de récupération envoyé');
+ }catch(e){console.warn('Password recovery',e);toast('⚠️ Impossible d’envoyer le lien de récupération')}
+}
+async function loadLeaderboard(force=false){
+ const box=document.getElementById('leaderboardList');if(!box||!sb||leaderboardBusy||(!force&&Date.now()-lastLeaderboard<30000))return;
+ leaderboardBusy=true;
+ box.innerHTML='<p class="hint">Chargement du classement…</p>';
+ try{
+   const {data,error}=await sb.from('leaderboard').select('nickname,total,prestige,level').order('total',{ascending:false}).order('prestige',{ascending:false}).order('level',{ascending:false}).limit(10);
+   if(error)throw error;
+   lastLeaderboard=Date.now();box.innerHTML=data?.length?data.map((p,i)=>`<div class="rank-row"><b>#${i+1}</b><span>${p.nickname||'Mineur'}</span><strong>${fmt(Number(p.total||0))}</strong><small>P${p.prestige||0} · N${p.level||1}</small></div>`).join(''):'<p class="hint">Aucun commandant classé pour le moment.</p>';
+ }catch(e){box.innerHTML='<p class="hint">Classement indisponible.</p>';console.warn('Leaderboard',e)}finally{leaderboardBusy=false}
+}
+
+
 async function logout(){
  if(sb)await sb.auth.signOut();
  state.account=null;save();render();toast('Déconnexion réussie · sauvegarde locale conservée')
@@ -417,9 +442,9 @@ function claimAchievement(id){
   render();
   toast('🏅 Succès : '+a[1]+' · +'+fmt(a[5]));
 }
-function prestige(){const target=1e14*Math.pow(18,state.prestige);if(state.runTotal<target)return;const keep={lifetimeTotal:state.lifetimeTotal,prestige:state.prestige+1,crystals:state.crystals,research:{...state.research},xp:state.xp,level:state.level,clicks:state.clicks,spent:state.spent,account:state.account,achievements:[...state.achievements]};state=Object.assign(fresh(),keep);save();toast('Ascension réussie');render()}
+function prestige(){const target=ascensionTarget();if(!ascensionReady()){toast('⛏️ Ascension : 10 bâtiments de chaque type sur les 32 planètes sont requis');return}if(state.runTotal<target)return;const keep={lifetimeTotal:state.lifetimeTotal,prestige:state.prestige+1,crystals:state.crystals,research:{...state.research},xp:state.xp,level:state.level,clicks:state.clicks,spent:state.spent,account:state.account,achievements:[...state.achievements]};state=Object.assign(fresh(),keep);save();toast('Ascension réussie');render()}
 
-document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.nav){nav(b.dataset.nav);return}if(b.id==='mineBtn'){mine();return}if(b.dataset.buy!==undefined){buyBuilding(Number(b.dataset.buy));return}if(b.dataset.tech){buyTech(b.dataset.tech);return}if(b.dataset.claim){claim(b.dataset.claim,b.dataset.claimType);return}if(b.dataset.achievement){claimAchievement(b.dataset.achievement);return}if(b.dataset.mtab){missionTab=b.dataset.mtab;document.querySelectorAll('[data-mtab]').forEach(x=>x.classList.toggle('active',x===b));renderMissions();return}if(b.id==='prestigeBtn'){prestige();return}if(b.id==='createAccount'){createAccount();return}if(b.id==='loginAccount'){loginAccount();return}if(b.id==='logoutAccount'){logout();return}});
+document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.nav){nav(b.dataset.nav);return}if(b.id==='mineBtn'){mine();return}if(b.dataset.buy!==undefined){buyBuilding(Number(b.dataset.buy));return}if(b.dataset.tech){buyTech(b.dataset.tech);return}if(b.dataset.claim){claim(b.dataset.claim,b.dataset.claimType);return}if(b.dataset.achievement){claimAchievement(b.dataset.achievement);return}if(b.dataset.mtab){missionTab=b.dataset.mtab;document.querySelectorAll('[data-mtab]').forEach(x=>x.classList.toggle('active',x===b));renderMissions();return}if(b.id==='prestigeBtn'){prestige();return}if(b.id==='createAccount'){createAccount();return}if(b.id==='loginAccount'){loginAccount();return}if(b.id==='logoutAccount'){logout();return}if(b.id==='recoverPassword'){recoverPassword();return}if(b.id==='forceSync'){syncCloud(true).then(ok=>toast(ok?'☁️ Sauvegarde synchronisée':'⚠️ Synchronisation impossible'));return}});
 setInterval(()=>{ensureDaily();ensureWeekly();checkEvent();checkAchievements();if(state.clickStreak&&Date.now()-state.lastClickAt>2200){state.clickStreak=0;}earn(autoRate()/4);if(document.visibilityState==='visible')render();save();if(state.account)syncCloud(false)},250);
 if(sb)sb.auth.getSession().then(async ({data})=>{if(data.session){state.account={username:data.session.user.user_metadata?.username||'Mineur',email:data.session.user.email,userId:data.session.user.id,localSnapshotAt:Date.now()};save();render();await restoreCloud();}});
 const offlineGain=claimOffline();if(!state.event.nextAt)scheduleEvent();checkEvent();checkAchievements();render();
