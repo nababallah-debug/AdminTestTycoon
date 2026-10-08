@@ -340,3 +340,9 @@ button,input{font:inherit}button{color:inherit}
     padding-right: 10px;
   }
 }
+
+
+/* V2.4: prevent accidental browser zoom while keeping scrolling and controls usable. */
+html,body,#app{touch-action:manipulation;}
+body{-webkit-text-size-adjust:100%;overscroll-behavior-x:none;}
+button,.mine-button,.panel-title button,.mission-tabs button,.buy,.primary,.secondary{touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
