@@ -273,3 +273,70 @@ button,input{font:inherit}button{color:inherit}
     grid-template-columns: 1fr;
   }
 }
+
+
+/* =========================================================
+   V2.2 — EVENEMENTS, HORS-LIGNE ET SUCCES
+========================================================= */
+
+.offline-panel {
+  margin-top: 10px;
+  background:
+    linear-gradient(135deg, rgba(12,22,35,.92), rgba(7,11,18,.92));
+}
+
+.offline-panel .hint {
+  margin: 8px 0 0;
+}
+
+.achievement-done {
+  border-color: #315b4d !important;
+  background:
+    linear-gradient(135deg, rgba(49,91,77,.10), var(--panel));
+}
+
+.achievement-done .bar i {
+  background: var(--green);
+  box-shadow: 0 0 8px rgba(98,230,164,.25);
+}
+
+.mission-tabs {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.mission-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.mission-tabs button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.event-strip {
+  position: relative;
+  overflow: hidden;
+}
+
+.event-strip::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--cyan);
+  box-shadow: 0 0 14px rgba(102,217,255,.4);
+}
+
+@media (max-width:760px) {
+  .offline-panel {
+    margin-top: 7px;
+  }
+
+  .mission-tabs button {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+}
