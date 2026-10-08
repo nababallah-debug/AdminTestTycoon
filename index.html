@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#05070d">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Space Mining Tycoon — V2.6</title>
+  <title>Space Mining Tycoon — V2.7</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -15,7 +15,7 @@
     <header class="topbar">
       <button class="brand" data-nav="control">
         <span class="brand-mark">◉</span>
-        <span><b>SPACE MINING</b><small>TYCOON // V2.6</small></span>
+        <span><b>SPACE MINING</b><small>TYCOON // V2.7</small></span>
       </button>
       <div class="top-stats">
         <span>CRÉDITS <b id="money">0</b></span>
@@ -119,10 +119,10 @@
     <nav class="bottom-nav">
       <button class="active" data-nav="control"><span>⌂</span>Centre</button>
       <button data-nav="buildings"><span>⛏</span>Colonie</button>
-      <button data-nav="sectors"><span>◈</span>Secteurs</button>
-      <button data-nav="tech"><span>✦</span>Tech</button>
-      <button data-nav="missions"><span>☷</span>Missions</button>
-      <button data-nav="prestige"><span>♜</span>Ascension</button>
+      <button data-nav="sectors"><span>◈</span><span class="nav-label">Secteurs</span><i id="navAlertSectors" class="nav-alert" hidden></i></button>
+      <button data-nav="tech"><span>✦</span><span class="nav-label">Tech</span><i id="navAlertTech" class="nav-alert" hidden></i></button>
+      <button data-nav="missions"><span>☷</span><span class="nav-label">Missions</span><i id="navAlertMissions" class="nav-alert" hidden></i></button>
+      <button data-nav="prestige"><span>♜</span><span class="nav-label">Ascension</span><i id="navAlertPrestige" class="nav-alert" hidden></i></button>
     </nav>
   </div>
   <div id="toast"></div>
