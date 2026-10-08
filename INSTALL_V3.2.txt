@@ -1,0 +1,11 @@
+SPACE MINING TYCOON V3.2 — DEPLOIEMENT ADMINTESTTYCOON
+
+1. Ouvrir le dépôt GitHub AdminTestTycoon.
+2. À la RACINE du dépôt, remplacer index.html, game.js, style.css et manifest.webmanifest par ceux de ce dossier.
+3. Ne pas créer un sous-dossier Space_Mining_Tycoon_V3.2 dans le dépôt.
+4. Attendre 1 à 3 minutes GitHub Pages.
+5. Faire Ctrl+F5 sur PC. Sur iPhone Safari, fermer l'onglet puis rouvrir l'URL.
+6. Le titre doit afficher SPACE MINING TYCOON // V3.2.
+7. Si l'écran reste sans design, l'ancienne page est encore servie : vérifier que les 4 fichiers sont bien à la racine.
+
+La version utilise style.css?v=3.1 et game.js?v=3.1 pour éviter un ancien cache.
