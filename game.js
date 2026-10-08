@@ -160,14 +160,14 @@ function fresh(){
  const buildings={};WORLDS.forEach((_,w)=>BUILDING_ROLES.forEach((_,b)=>buildings[w+'-'+b]=0));
  return {money:0,runTotal:0,lifetimeTotal:0,prestige:0,crystals:0,buildings,research:{},xp:0,level:1,clicks:0,spent:0,
 daily:{key:dateKey(),claimed:[],base:{clicks:0,lifetime:0,spent:0,buildings:0}},
-weekly:{key:weekKey(),claimed:[]},
+weekly:{key:weekKey(),claimed:[],base:{clicks:0,lifetime:0,run:0,spent:0,buildings:0,tech:0,world:1}},
 campaignClaimed:[],
 achievements:[],
 event:{id:null,activeUntil:0,nextAt:0},
 offlineLast:0,lastAt:Date.now(),account:null,clickStreak:0,lastClickAt:0,clickMilestones:0};
 }
 function migrate(z){
- const base=fresh();z=Object.assign(base,z||{});z.buildings=Object.assign({},base.buildings,z.buildings||{});z.research=z.research||{};z.daily=z.daily||base.daily;z.weekly=z.weekly||base.weekly;
+ const base=fresh();z=Object.assign(base,z||{});z.buildings=Object.assign({},base.buildings,z.buildings||{});z.research=z.research||{};z.daily=z.daily||base.daily;z.weekly=z.weekly||base.weekly;const weeklyHasBase=!!(z.weekly&&z.weekly.base&&typeof z.weekly.base==='object');z.weekly.base=Object.assign({},base.weekly.base,z.weekly.base||{});
  z.prestige=Number(z.prestige)||0;z.lifetimeTotal=Number(z.lifetimeTotal)||0;z.runTotal=Number(z.runTotal)||z.money||0;z.money=Math.max(0,Number(z.money)||0);z.clicks=Number(z.clicks||z.cLICKS)||0;z.spent=Number(z.spent)||0;
 z.campaignClaimed=Array.isArray(z.campaignClaimed)?z.campaignClaimed:[];
 z.achievements=Array.isArray(z.achievements)?z.achievements:[];
@@ -176,6 +176,7 @@ z.clickStreak=Number(z.clickStreak)||0;z.lastClickAt=Number(z.lastClickAt)||0;z.
 z.event=Object.assign({id:null,activeUntil:0,nextAt:0},z.event||{});
 z.offlineLast=Number(z.offlineLast)||0;
 z.lastAt=Number(z.lastAt)||Date.now();
+ if(!weeklyHasBase||z.weekly.key!==weekKey()){z.weekly={key:weekKey(),claimed:[],base:{clicks:z.clicks,lifetime:z.lifetimeTotal,run:z.runTotal,spent:z.spent,buildings:totalBuildings(),tech:Object.keys(z.research||{}).length,world:WORLDS.filter((_,i)=>i===0||BUILDING_ROLES.every((__,b)=>(z.buildings[(i-1)+'-'+b]||0)>=1)).length}}}
  for(let w=0;w<WORLDS.length;w++)for(let b=0;b<BUILDING_ROLES.length;b++){const k=w+'-'+b;z.buildings[k]=Math.max(0,Number(z.buildings[k])||0)}
  return z;
 }
@@ -209,6 +210,12 @@ function earn(x){if(!Number.isFinite(x)||x<=0)return;state.money+=x;state.runTot
 function spend(x){state.money-=x;state.spent+=x}
 function toast(t){const e=document.getElementById('toast');if(!e)return;e.textContent=t;e.classList.add('toast-show');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('toast-show'),2200)}
 function nav(name){screen=name;document.querySelectorAll('.screen').forEach(x=>x.classList.toggle('active',x.dataset.screen===name));document.querySelectorAll('[data-nav]').forEach(x=>x.classList.toggle('active',x.dataset.nav===name));render()}
+function hasTechAlert(){return BRANCH_ORDER.some(br=>BRANCHES[br].some((t,i)=>!techOwned(t[0])&&state.money>=t[2]&&(i===0||techOwned(BRANCHES[br][i-1][0]))))}
+function hasMissionAlert(){ensureDaily();ensureWeekly();ensureMissionState();const ds=dailySet();if(ds.some((d,i)=>!state.daily.claimed.includes(i)&&dailyValue(d)>=d[2]))return true;if(CAMPAIGN.some(m=>!state.campaignClaimed.includes(m[0])&&missionValue(m)>=m[3]))return true;if(WEEKLY.some((m,i)=>!state.weekly.claimed.includes(i)&&weeklyValue(m)>=m[3]))return true;return ACHIEVEMENTS.some(a=>!state.achievementClaimed.includes(a[0])&&achievementValue(a)>=a[4])}
+function hasSectorAlert(){for(let i=0;i<WORLDS.length;i++){if(i!==selectedWorld&&worldUnlocked(i))return true}return false}
+function hasPrestigeAlert(){const target=1e14*Math.pow(18,state.prestige);return state.runTotal>=target}
+function setNavAlert(id,on){const el=document.getElementById(id);if(el)el.hidden=!on}
+function renderNavAlerts(){setNavAlert('navAlertSectors',hasSectorAlert());setNavAlert('navAlertTech',hasTechAlert());setNavAlert('navAlertMissions',hasMissionAlert());setNavAlert('navAlertPrestige',hasPrestigeAlert())}
 function render(){
  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};
  set('money',fmt(state.money));set('rate',fmt(autoRate())+'/s');set('prestige','P'+state.prestige);set('accountName',state.account?.username||'Mineur');set('accountDot',state.account?'CLOUD':'LOCAL');
@@ -216,7 +223,7 @@ function render(){
  set('buildingCount',totalBuildings());set('sectorProgress',WORLDS.filter((_,i)=>worldUnlocked(i)).length+' / '+WORLDS.length);set('techProgress',Object.keys(state.research).length);set('missionProgress',CAMPAIGN.filter(m=>missionValue(m)>=m[3]).length);set('buildingSector',WORLDS[selectedWorld][1]);set('sectorCount',WORLDS.filter((_,i)=>worldUnlocked(i)).length+' / '+WORLDS.length);set('techCount',Object.values(BRANCHES).reduce((a,b)=>a+b.length,0)+' technologies');
  set('missionCount',CAMPAIGN.filter(m=>missionValue(m)>=m[3]).length+' / '+CAMPAIGN.length+' · '+state.achievements.length+'/'+ACHIEVEMENTS.length+' succès');
  set('clickStreak','Série : '+state.clickStreak);set('nextClickBonus',((Math.floor(state.clicks/100)+1)*100-state.clicks)+' clics');set('sectorBonus','×'+worldFactor(selectedWorld).toFixed(2));set('comboValue',Math.min(3,1+Math.floor(state.clickStreak/10)));const ch=document.getElementById('comboHud');if(ch)ch.hidden=state.clickStreak<2;const ev=activeEvent();set('eventStrip',ev?`${ev[2]} ${ev[1]} · ${ev[3]} · encore ${Math.max(1,Math.ceil((state.event.activeUntil-Date.now())/60000))} min`:'Aucun phénomène détecté.');
- renderBuildings();renderMap();renderTech();renderMissions();renderDailyPreview();renderPrestige();renderAccount();
+ renderBuildings();renderMap();renderTech();renderMissions();renderDailyPreview();renderPrestige();renderAccount();renderNavAlerts();
 }
 function renderBuildings(){
  const box=document.getElementById('buildingList');if(!box)return;const w=WORLDS[selectedWorld];
@@ -235,7 +242,8 @@ function renderTech(){
 function branchName(x){return ({extraction:'EXTRACTION',automation:'AUTOMATISATION',energy:'ÉNERGIE',economy:'ÉCONOMIE',exploration:'EXPLORATION'})[x]}
 function missionValue(m){switch(m[2]){case'click':return state.clicks;case'lifetime':return state.lifetimeTotal;case'run':return state.runTotal;case'build':return totalBuildings();case'spend':return state.spent;case'tech':return Object.keys(state.research).length;case'level':return state.level;case'world':return WORLDS.filter((_,i)=>worldUnlocked(i)).length;default:return 0}}
 function ensureDaily(){if(state.daily.key!==dateKey())state.daily={key:dateKey(),claimed:[],base:{clicks:state.clicks,lifetime:state.lifetimeTotal,spent:state.spent,buildings:totalBuildings()}}}
-function ensureWeekly(){if(state.weekly.key!==weekKey())state.weekly={key:weekKey(),claimed:[]}}
+function ensureWeekly(){if(state.weekly.key!==weekKey()){state.weekly={key:weekKey(),claimed:[],base:{clicks:state.clicks,lifetime:state.lifetimeTotal,run:state.runTotal,spent:state.spent,buildings:totalBuildings(),tech:Object.keys(state.research).length,world:WORLDS.filter((_,i)=>worldUnlocked(i)).length}}}}
+function weeklyValue(m){ensureWeekly();const base=state.weekly.base||{};switch(m[2]){case'click':return state.clicks-(base.clicks||0);case'build':return totalBuildings()-(base.buildings||0);case'run':return state.runTotal-(base.run||0);case'spend':return state.spent-(base.spent||0);case'tech':return Object.keys(state.research).length-(base.tech||0);case'world':return WORLDS.filter((_,i)=>worldUnlocked(i)).length-(base.world||1);default:return 0}}
 function ensureMissionState(){
   if(!Array.isArray(state.campaignClaimed))state.campaignClaimed=[];
   if(!Array.isArray(state.achievementClaimed))state.achievementClaimed=[...state.achievements];
@@ -251,7 +259,7 @@ function renderMissions(){
  }else if(missionTab==='campaign'){
    box.innerHTML=CAMPAIGN.map(m=>missionHTML(m[0],m[1],m[2],m[3],m[4],state.campaignClaimed.includes(m[0]),missionValue(m))).join('');
  }else if(missionTab==='weekly'){
-   box.innerHTML=WEEKLY.map((m,i)=>missionHTML(m[0],m[1],m[2],m[3],m[4],state.weekly.claimed.includes(i),missionValue(m))).join('');
+   box.innerHTML=WEEKLY.map((m,i)=>missionHTML(m[0],m[1],m[2],m[3],m[4],state.weekly.claimed.includes(i),weeklyValue(m))).join('');
  }else{
    box.innerHTML=ACHIEVEMENTS.map(a=>{
      const claimed=state.achievementClaimed.includes(a[0]);
@@ -302,7 +310,7 @@ function claim(id,type){
   }else if(type==='weekly'){
     const i=WEEKLY.findIndex(x=>x[0]===id);
     if(i<0){toast('Mission hebdomadaire introuvable');return;}
-    if(!state.weekly.claimed.includes(i)&&missionValue(WEEKLY[i])>=WEEKLY[i][3]){
+    if(!state.weekly.claimed.includes(i)&&weeklyValue(WEEKLY[i])>=WEEKLY[i][3]){
       state.weekly.claimed.push(i);
       earn(WEEKLY[i][4]);
       save();render();toast('📆 Mission hebdomadaire : +'+fmt(WEEKLY[i][4]));
