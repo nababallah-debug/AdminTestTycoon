@@ -164,7 +164,7 @@ weekly:{key:weekKey(),claimed:[]},
 campaignClaimed:[],
 achievements:[],
 event:{id:null,activeUntil:0,nextAt:0},
-offlineLast:0,lastAt:Date.now(),account:null};
+offlineLast:0,lastAt:Date.now(),account:null,clickStreak:0,lastClickAt:0,clickMilestones:0};
 }
 function migrate(z){
  const base=fresh();z=Object.assign(base,z||{});z.buildings=Object.assign({},base.buildings,z.buildings||{});z.research=z.research||{};z.daily=z.daily||base.daily;z.weekly=z.weekly||base.weekly;
@@ -172,6 +172,7 @@ function migrate(z){
 z.campaignClaimed=Array.isArray(z.campaignClaimed)?z.campaignClaimed:[];
 z.achievements=Array.isArray(z.achievements)?z.achievements:[];
 z.achievementClaimed=Array.isArray(z.achievementClaimed)?z.achievementClaimed:[...z.achievements];
+z.clickStreak=Number(z.clickStreak)||0;z.lastClickAt=Number(z.lastClickAt)||0;z.clickMilestones=Number(z.clickMilestones)||0;
 z.event=Object.assign({id:null,activeUntil:0,nextAt:0},z.event||{});
 z.offlineLast=Number(z.offlineLast)||0;
 z.lastAt=Number(z.lastAt)||Date.now();
@@ -213,7 +214,8 @@ function render(){
  set('money',fmt(state.money));set('rate',fmt(autoRate())+'/s');set('prestige','P'+state.prestige);set('accountName',state.account?.username||'Mineur');set('accountDot',state.account?'CLOUD':'LOCAL');
  set('heroMoney',fmt(state.money));set('heroIncome','+'+fmt(autoRate())+' / sec');set('clickPower',fmt(clickPower()));set('sectorName',WORLDS[selectedWorld][1]);set('sectorMeta','Indice industriel ×'+worldFactor(selectedWorld).toFixed(2));
  set('buildingCount',totalBuildings());set('sectorProgress',WORLDS.filter((_,i)=>worldUnlocked(i)).length+' / '+WORLDS.length);set('techProgress',Object.keys(state.research).length);set('missionProgress',CAMPAIGN.filter(m=>missionValue(m)>=m[3]).length);set('buildingSector',WORLDS[selectedWorld][1]);set('sectorCount',WORLDS.filter((_,i)=>worldUnlocked(i)).length+' / '+WORLDS.length);set('techCount',Object.values(BRANCHES).reduce((a,b)=>a+b.length,0)+' technologies');
- set('missionCount',CAMPAIGN.filter(m=>missionValue(m)>=m[3]).length+' / '+CAMPAIGN.length+' · '+state.achievements.length+'/'+ACHIEVEMENTS.length+' succès');const ev=activeEvent();set('eventStrip',ev?`${ev[2]} ${ev[1]} · ${ev[3]} · encore ${Math.max(1,Math.ceil((state.event.activeUntil-Date.now())/60000))} min`:'Aucun phénomène détecté.');
+ set('missionCount',CAMPAIGN.filter(m=>missionValue(m)>=m[3]).length+' / '+CAMPAIGN.length+' · '+state.achievements.length+'/'+ACHIEVEMENTS.length+' succès');
+ set('clickStreak','Série : '+state.clickStreak);set('nextClickBonus',((Math.floor(state.clicks/100)+1)*100-state.clicks)+' clics');set('sectorBonus','×'+worldFactor(selectedWorld).toFixed(2));set('comboValue',Math.min(3,1+Math.floor(state.clickStreak/10)));const ch=document.getElementById('comboHud');if(ch)ch.hidden=state.clickStreak<2;const ev=activeEvent();set('eventStrip',ev?`${ev[2]} ${ev[1]} · ${ev[3]} · encore ${Math.max(1,Math.ceil((state.event.activeUntil-Date.now())/60000))} min`:'Aucun phénomène détecté.');
  renderBuildings();renderMap();renderTech();renderMissions();renderDailyPreview();renderPrestige();renderAccount();
 }
 function renderBuildings(){
@@ -269,7 +271,23 @@ async function loginAccount(){if(accountBusy||!sb)return;accountBusy=true;try{co
 async function logout(){if(sb)await sb.auth.signOut();state.account=null;save();render();toast('Session locale conservée')}
 function buyBuilding(b){const c=cost(selectedWorld,b);if(state.money<c){toast('Crédits insuffisants');return}spend(c);const k=selectedWorld+'-'+b;state.buildings[k]=(state.buildings[k]||0)+1;state.xp+=20;save();render()}
 function buyTech(id){let t=null;for(const br of BRANCH_ORDER){const found=BRANCHES[br].find(x=>x[0]===id);if(found){t=found;break}}if(!t||techOwned(id)||state.money<t[2])return;const br=BRANCH_ORDER.find(k=>BRANCHES[k].some(x=>x[0]===id));const arr=BRANCHES[br],idx=arr.findIndex(x=>x[0]===id);if(idx>0&&!techOwned(arr[idx-1][0])){toast('Technologie précédente requise');return}spend(t[2]);state.research[id]=true;state.xp+=500;save();toast('Technologie acquise');render()}
-function mine(){earn(clickPower());state.clicks++;save();render();document.getElementById('mineBtn')?.animate([{transform:'scale(1)'},{transform:'scale(.96)'},{transform:'scale(1)'}],{duration:130})}
+function spawnClickFx(amount,critical=false){
+ const box=document.getElementById('clickFx');if(!box)return;
+ const e=document.createElement('span');e.className='click-pop'+(critical?' critical':'');e.textContent='+'+fmt(amount)+(critical?' ✦':'');
+ e.style.left=(42+Math.random()*16)+'%';e.style.top=(42+Math.random()*16)+'%';box.appendChild(e);setTimeout(()=>e.remove(),850);
+}
+function mine(){
+ const now=Date.now();
+ if(now-(state.lastClickAt||0)>2200)state.clickStreak=0;
+ state.clickStreak=Math.min(30,state.clickStreak+1);state.lastClickAt=now;
+ const combo=Math.min(3,1+Math.floor(state.clickStreak/10));
+ const critical=Math.random()<0.035;
+ const amount=clickPower()*combo*(critical?5:1);
+ earn(amount);state.clicks++;
+ if(state.clicks%100===0){state.clickMilestones++;earn(clickPower()*10);toast('🎯 Palier de forage : bonus +'+fmt(clickPower()*10));}
+ spawnClickFx(amount,critical);save();render();
+ document.getElementById('mineBtn')?.animate([{transform:'scale(1)'},{transform:'scale(.96)'},{transform:'scale(1)'}],{duration:130});
+}
 function claim(id,type){
   ensureMissionState();
   if(type==='daily'){
@@ -313,7 +331,7 @@ function claimAchievement(id){
 function prestige(){const target=1e14*Math.pow(18,state.prestige);if(state.runTotal<target)return;const keep={lifetimeTotal:state.lifetimeTotal,prestige:state.prestige+1,crystals:state.crystals,research:{...state.research},xp:state.xp,level:state.level,clicks:state.clicks,spent:state.spent,account:state.account,achievements:[...state.achievements]};state=Object.assign(fresh(),keep);save();toast('Ascension réussie');render()}
 
 document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.nav){nav(b.dataset.nav);return}if(b.id==='mineBtn'){mine();return}if(b.dataset.buy!==undefined){buyBuilding(Number(b.dataset.buy));return}if(b.dataset.tech){buyTech(b.dataset.tech);return}if(b.dataset.claim){claim(b.dataset.claim,b.dataset.claimType);return}if(b.dataset.achievement){claimAchievement(b.dataset.achievement);return}if(b.dataset.mtab){missionTab=b.dataset.mtab;document.querySelectorAll('[data-mtab]').forEach(x=>x.classList.toggle('active',x===b));renderMissions();return}if(b.id==='prestigeBtn'){prestige();return}if(b.id==='createAccount'){createAccount();return}if(b.id==='loginAccount'){loginAccount();return}if(b.id==='logoutAccount'){logout();return}});
-setInterval(()=>{ensureDaily();ensureWeekly();checkEvent();checkAchievements();earn(autoRate()/4);if(document.visibilityState==='visible')render();save()},250);
+setInterval(()=>{ensureDaily();ensureWeekly();checkEvent();checkAchievements();if(state.clickStreak&&Date.now()-state.lastClickAt>2200){state.clickStreak=0;}earn(autoRate()/4);if(document.visibilityState==='visible')render();save()},250);
 if(sb)sb.auth.getSession().then(({data})=>{if(data.session){state.account={username:data.session.user.user_metadata?.username||'Mineur',email:data.session.user.email,userId:data.session.user.id};save();render()}});
 const offlineGain=claimOffline();if(!state.event.nextAt)scheduleEvent();checkEvent();checkAchievements();render();
 
