@@ -1,10 +1,13 @@
-const CACHE = 'space-mining-tycoon-v21';
+const CACHE = 'space-mining-tycoon-v22';
 
 const CORE = [
   './',
   './index.html',
   './style.css',
   './game.js',
+  './update-v12.css',
+  './update-v13.css',
+  './update-v13.js',
   './manifest.webmanifest',
   './icon.svg'
 ];
