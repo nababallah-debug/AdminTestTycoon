@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#05070d">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Space Mining Tycoon — V2.7</title>
+  <title>Space Mining Tycoon — V2.8</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -15,7 +15,7 @@
     <header class="topbar">
       <button class="brand" data-nav="control">
         <span class="brand-mark">◉</span>
-        <span><b>SPACE MINING</b><small>TYCOON // V2.7</small></span>
+        <span><b>SPACE MINING</b><small>TYCOON // V2.8</small></span>
       </button>
       <div class="top-stats">
         <span>CRÉDITS <b id="money">0</b></span>
@@ -105,14 +105,14 @@
             <input id="emailInput" type="email" placeholder="E-mail (pour récupération)">
             <button id="createAccount" class="primary wide">CRÉER UN COMPTE</button>
             <button id="loginAccount" class="secondary wide">SE CONNECTER</button>
-            <p class="hint">La V2 utilise Supabase pour la sauvegarde multi-appareils. L'e-mail sert à la récupération du compte.</p>
+            <p class="hint">Compte réel Supabase : pseudo + mot de passe + e-mail de récupération. Ta progression est synchronisée dans le cloud et récupérable sur un autre appareil.</p>
           </div>
           <div id="authLoggedIn" hidden>
             <div class="profile-card"><span class="avatar">◉</span><div><small>COMMANDANT</small><h3 id="profileName">Mineur</h3><p id="profileEmail"></p></div></div>
             <button id="logoutAccount" class="secondary wide">SE DÉCONNECTER</button>
           </div>
         </div>
-        <div class="panel"><div class="panel-title"><b>SÉCURITÉ</b></div><p class="hint">La progression locale reste active comme filet de sécurité. La synchronisation cloud sera activée une fois les tables et règles Supabase validées.</p></div>
+        <div class="panel"><div class="panel-title"><b>SÉCURITÉ</b></div><p class="hint" id="cloudStatus">La progression locale reste disponible comme filet de sécurité. Le compte connecté sauvegarde automatiquement ta progression dans le cloud.</p></div>
       </section>
     </main>
 
