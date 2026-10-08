@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#05070d">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Space Mining Tycoon — V2.5</title>
+  <title>Space Mining Tycoon — V2.6</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -15,7 +15,7 @@
     <header class="topbar">
       <button class="brand" data-nav="control">
         <span class="brand-mark">◉</span>
-        <span><b>SPACE MINING</b><small>TYCOON // V2.5</small></span>
+        <span><b>SPACE MINING</b><small>TYCOON // V2.6</small></span>
       </button>
       <div class="top-stats">
         <span>CRÉDITS <b id="money">0</b></span>
@@ -33,10 +33,17 @@
           <div class="planet-hero">🌑</div>
           <div class="sector-label"><small>SECTEUR ACTIF</small><h1 id="sectorName">Astéroïde Nova</h1><p id="sectorMeta">Indice industriel ×1</p></div>
           <div class="hero-economy"><span>TRÉSORERIE</span><strong id="heroMoney">0</strong><small id="heroIncome">+0 / sec</small></div>
+          <div id="clickFx" class="click-fx" aria-hidden="true"></div>
+          <div id="comboHud" class="combo-hud" hidden>COMBO ×<b id="comboValue">1</b></div>
           <button id="mineBtn" class="mine-button"><span>⛏</span><b>EXTRAIRE</b><small>+<span id="clickPower">0</span></small></button>
         </div>
 
-        <div class="event-strip" id="eventStrip">Aucun phénomène détecté.</div>
+        <div class="micro-upgrades" id="microUpgrades">
+            <div><small>ÉTAT DU FORAGE</small><b id="clickStreak">Série : 0</b></div>
+            <div><small>PROCHAIN BONUS</small><b id="nextClickBonus">100 clics</b></div>
+            <div><small>SECTEUR</small><b id="sectorBonus">×1.00</b></div>
+          </div>
+          <div class="event-strip" id="eventStrip">Aucun phénomène détecté.</div>
         <div class="panel offline-panel"><div class="panel-title"><span>🌙</span><b>RÉCUPÉRATION HORS-LIGNE</b><button data-nav="account">COMPTE</button></div><p class="hint">La colonie continue de produire pendant ton absence. Le gain est calculé automatiquement au retour.</p></div>
 
         <div class="control-grid">
