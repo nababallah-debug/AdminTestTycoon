@@ -1,123 +1,342 @@
-<!doctype html>
-<html lang="fr">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#05070d">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Space Mining Tycoon — V2.1</title>
-  <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <div id="app">
-    <header class="topbar">
-      <button class="brand" data-nav="control">
-        <span class="brand-mark">◉</span>
-        <span><b>SPACE MINING</b><small>TYCOON // V2.1</small></span>
-      </button>
-      <div class="top-stats">
-        <span>CRÉDITS <b id="money">0</b></span>
-        <span>PROD <b id="rate">0/s</b></span>
-        <span>PRESTIGE <b id="prestige">P0</b></span>
-      </div>
-      <button class="account-chip" data-nav="account"><span id="accountDot">LOCAL</span><b id="accountName">Mineur</b></button>
-    </header>
+:root{
+  --bg:#05070d;--panel:#0a0f19;--panel2:#0d1420;--line:#1b2a3d;
+  --text:#e8f1ff;--muted:#7890aa;--cyan:#66d9ff;--blue:#4c8dff;
+  --green:#62e6a4;--gold:#e7c56a;--danger:#ff7185;
+}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+body{min-height:100vh;background:radial-gradient(circle at 50% -10%,#122238 0,#05070d 42%,#03050a 100%)}
+button,input{font:inherit}button{color:inherit}
+#app{max-width:1180px;margin:auto;min-height:100vh;padding-bottom:82px}
+.topbar{height:66px;display:flex;align-items:center;gap:16px;padding:10px 16px;border-bottom:1px solid var(--line);background:rgba(5,7,13,.88);backdrop-filter:blur(16px);position:sticky;top:0;z-index:20}
+.brand,.account-chip,.panel-title button,.mission-tabs button{background:none;border:0;cursor:pointer}.brand{display:flex;align-items:center;gap:10px;text-align:left}.brand-mark{font-size:26px;color:var(--cyan)}.brand b{display:block;font-size:12px;letter-spacing:1.5px}.brand small{display:block;color:var(--muted);font-size:9px;letter-spacing:2px}.top-stats{display:flex;gap:18px;margin-left:auto}.top-stats span{font-size:9px;color:var(--muted);letter-spacing:1px}.top-stats b{display:block;color:var(--text);font-size:12px;margin-top:3px}.account-chip{border-left:1px solid var(--line);padding-left:14px;text-align:left}.account-chip span{font-size:8px;color:var(--green);display:block}.account-chip b{font-size:11px}
+.screen{display:none;padding:18px}.screen.active{display:block}.hero-space{position:relative;overflow:hidden;min-height:470px;border:1px solid var(--line);border-radius:8px;background:linear-gradient(160deg,#08111d,#05070d 60%,#090b12);display:flex;align-items:center;justify-content:center}.stars{position:absolute;inset:0;background-image:radial-gradient(circle,#dceeff 1px,transparent 1px);background-size:61px 61px;opacity:.25}.nebula{position:absolute;width:500px;height:280px;background:radial-gradient(ellipse,rgba(61,137,255,.16),transparent 68%);filter:blur(20px)}.orbit{position:absolute;border:1px solid rgba(102,217,255,.13);border-radius:50%}.orbit-a{width:430px;height:170px;transform:rotate(-18deg)}.orbit-b{width:620px;height:260px;transform:rotate(22deg)}.planet-hero{font-size:100px;filter:drop-shadow(0 0 28px rgba(83,168,255,.22));z-index:2}.sector-label{position:absolute;left:22px;top:22px;z-index:3}.sector-label small,.screen-head small,.ascension>small{color:var(--cyan);font-size:9px;letter-spacing:2px}.sector-label h1{margin:5px 0;font-size:28px;font-weight:600}.sector-label p{margin:0;color:var(--muted);font-size:11px}.hero-economy{position:absolute;right:22px;top:22px;text-align:right;z-index:3}.hero-economy span{display:block;color:var(--muted);font-size:8px;letter-spacing:2px}.hero-economy strong{display:block;font-size:25px;margin-top:4px}.hero-economy small{color:var(--green);font-size:10px}.mine-button{position:absolute;bottom:30px;z-index:4;width:180px;height:180px;border-radius:50%;border:1px solid rgba(102,217,255,.45);background:radial-gradient(circle at 35% 25%,#18344d,#07101a 62%,#04070c);box-shadow:0 0 0 12px rgba(102,217,255,.025),0 0 50px rgba(76,141,255,.15);cursor:pointer}.mine-button span{display:block;font-size:38px}.mine-button b{display:block;letter-spacing:2px;font-size:13px;margin-top:5px}.mine-button small{color:var(--green);font-size:11px}
+.event-strip{margin:10px 0;padding:11px 13px;border-left:2px solid var(--cyan);background:rgba(11,20,32,.7);font-size:11px;color:#a9bfd5}
+.control-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px}.panel{border:1px solid var(--line);background:rgba(9,14,23,.82);border-radius:7px;padding:14px}.compact{min-height:120px}.panel-title{display:flex;align-items:center;gap:8px;font-size:10px;letter-spacing:1.2px}.panel-title button{margin-left:auto;color:var(--cyan);font-size:9px}.compact>strong{display:block;font-size:25px;margin-top:17px}.compact>small{color:var(--muted);font-size:9px}.daily-preview{margin-top:10px}.screen-head{display:flex;align-items:end;justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:12px}.screen-head h2{margin:4px 0 0;font-size:24px;font-weight:600}.screen-head>span,.sector-badge{color:var(--muted);font-size:10px}
+.building-list{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}.building{display:grid;grid-template-columns:48px 1fr auto;align-items:center;gap:10px;border:1px solid var(--line);background:var(--panel);padding:12px;border-radius:7px}.building-icon{font-size:27px;text-align:center}.building-info strong{display:block;font-size:13px}.building-info small,.building-info em{display:block;font-size:9px;color:var(--muted);margin-top:4px;font-style:normal}.buy,.primary,.secondary{border:1px solid var(--line);background:#101a29;padding:9px 12px;border-radius:4px;cursor:pointer;font-size:9px;letter-spacing:1px}.buy:disabled,.primary:disabled{opacity:.35;cursor:not-allowed}.primary{background:#12324a;border-color:#2d7694;color:#bdeeff}.secondary{background:transparent;color:var(--cyan)}.wide{width:100%;margin-top:12px}
+.galaxy-map{min-height:680px;position:relative;border:1px solid var(--line);background:radial-gradient(circle at center,#101c2b,#05070d 68%);overflow:hidden;border-radius:7px}.galaxy-map:before{content:"";position:absolute;inset:0;background-image:radial-gradient(circle,#fff 1px,transparent 1px);background-size:53px 53px;opacity:.16}.sector-node{position:absolute;transform:translate(-50%,-50%);background:#08101a;border:1px solid #29445e;width:78px;height:78px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;font-size:24px;z-index:2}.sector-node small{font-size:7px;color:var(--muted);max-width:65px;text-align:center;overflow:hidden;white-space:nowrap}.sector-node.active{border-color:var(--cyan);box-shadow:0 0 25px rgba(102,217,255,.2)}.sector-node.locked{opacity:.3;filter:grayscale(1)}.sector-detail{margin-top:10px}
+.tech-tree{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding-bottom:40px}.tech-branch{border:1px solid var(--line);padding:10px;background:#080d16;border-radius:7px}.tech-branch h3{margin:0 0 10px;font-size:12px}.tech-node{border:1px solid #1b3147;background:#0a121e;padding:11px;margin:8px 0;border-radius:5px}.tech-node.owned{border-color:#316b5b}.tech-node.locked{opacity:.42}.tech-node strong{display:block;font-size:11px}.tech-node small{display:block;color:var(--muted);font-size:9px;margin:4px 0 8px}.tech-node button{width:100%}
+.mission-tabs{display:flex;border-bottom:1px solid var(--line);margin-bottom:12px}.mission-tabs button{padding:11px 13px;color:var(--muted);font-size:9px;letter-spacing:1px}.mission-tabs button.active{color:var(--cyan);border-bottom:1px solid var(--cyan)}.mission{border:1px solid var(--line);background:var(--panel);padding:13px;margin-bottom:8px;border-radius:6px}.mission-head{display:flex;justify-content:space-between;gap:10px}.mission-head strong{font-size:11px}.mission-head b{font-size:10px;color:var(--gold)}.mission small{display:block;color:var(--muted);font-size:9px;margin:7px 0}.bar{height:3px;background:#162231}.bar i{display:block;height:100%;background:var(--cyan)}
+.ascension{text-align:center;padding:55px 18px;border:1px solid var(--line);background:radial-gradient(circle at center,#111d2a,#070a10 65%);min-height:580px}.ascension h2{font-size:34px;letter-spacing:6px;font-weight:500;margin:6px 0 30px}.prestige-ring{width:180px;height:180px;border:1px solid #355b70;border-radius:50%;margin:0 auto 25px;display:flex;flex-direction:column;justify-content:center;box-shadow:0 0 55px rgba(102,217,255,.08)}.prestige-ring b{font-size:35px}.prestige-ring span{color:var(--muted);font-size:9px;letter-spacing:2px}.ascension p{max-width:520px;margin:auto;color:var(--muted);font-size:11px;line-height:1.7}.prestige-stats{display:flex;justify-content:center;gap:35px;margin:28px 0;color:var(--muted);font-size:9px}.prestige-stats b{display:block;color:var(--text);font-size:14px;margin-top:5px}
+.auth-box{max-width:520px;margin:auto}.auth-box input{display:block;width:100%;margin:8px 0;padding:13px;border:1px solid var(--line);background:#080d15;color:var(--text);border-radius:4px;outline:none}.hint{color:var(--muted);font-size:9px;line-height:1.6}.profile-card{display:flex;gap:12px;align-items:center;padding:15px;border:1px solid var(--line);background:var(--panel)}.avatar{font-size:30px;color:var(--cyan)}.profile-card h3{margin:3px 0}.profile-card p{margin:0;color:var(--muted);font-size:9px}
+.bottom-nav{position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:min(1180px,100%);height:70px;display:grid;grid-template-columns:repeat(6,1fr);background:rgba(5,7,13,.94);border-top:1px solid var(--line);backdrop-filter:blur(18px);z-index:30}.bottom-nav button{border:0;background:none;color:var(--muted);font-size:8px;cursor:pointer}.bottom-nav button span{display:block;font-size:19px;margin-bottom:4px}.bottom-nav button.active{color:var(--cyan)}
+#toast{position:fixed;left:50%;bottom:82px;transform:translateX(-50%) translateY(20px);opacity:0;background:#0b1522;border:1px solid #28445d;padding:10px 14px;border-radius:4px;font-size:10px;z-index:50;transition:.2s;pointer-events:none}.toast-show{opacity:1!important;transform:translateX(-50%) translateY(0)!important}
+@media(max-width:760px){.top-stats{display:none}.topbar{justify-content:space-between}.screen{padding:10px}.hero-space{min-height:520px}.planet-hero{font-size:82px}.control-grid{grid-template-columns:1fr 1fr}.building-list,.tech-tree{grid-template-columns:1fr}.building{grid-template-columns:42px 1fr auto}.screen-head h2{font-size:20px}}
 
-    <main id="screens">
-      <section class="screen active" data-screen="control">
-        <div class="hero-space">
-          <div class="stars"></div><div class="nebula"></div>
-          <div class="orbit orbit-a"></div><div class="orbit orbit-b"></div>
-          <div class="planet-hero">🌑</div>
-          <div class="sector-label"><small>SECTEUR ACTIF</small><h1 id="sectorName">Astéroïde Nova</h1><p id="sectorMeta">Indice industriel ×1</p></div>
-          <div class="hero-economy"><span>TRÉSORERIE</span><strong id="heroMoney">0</strong><small id="heroIncome">+0 / sec</small></div>
-          <button id="mineBtn" class="mine-button"><span>⛏</span><b>EXTRAIRE</b><small>+<span id="clickPower">0</span></small></button>
-        </div>
+/* =========================================================
+   V2.1 — PLANETES, CARTE GALACTIQUE ET ARBRE DE COMPETENCES
+========================================================= */
 
-        <div class="event-strip" id="eventStrip">Aucun phénomène détecté.</div>
+.planet-building-head {
+  display: grid;
+  grid-template-columns: 42px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: linear-gradient(135deg, #0b1522, #080d15);
+}
 
-        <div class="control-grid">
-          <article class="panel compact"><div class="panel-title"><span>🏗</span><b>COLONIE</b><button data-nav="buildings">VOIR</button></div><strong id="buildingCount">0</strong><small>bâtiments installés</small></article>
-          <article class="panel compact"><div class="panel-title"><span>🌌</span><b>EXPLORATION</b><button data-nav="sectors">CARTE</button></div><strong id="sectorProgress">1 / 32</strong><small>secteurs accessibles</small></article>
-          <article class="panel compact"><div class="panel-title"><span>🧪</span><b>RECHERCHE</b><button data-nav="tech">ARBRE</button></div><strong id="techProgress">0</strong><small>technologies acquises</small></article>
-          <article class="panel compact"><div class="panel-title"><span>📜</span><b>OBJECTIFS</b><button data-nav="missions">MISSIONS</button></div><strong id="missionProgress">0</strong><small>objectifs terminés</small></article>
-        </div>
+.planet-building-head > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid #28435a;
+  border-radius: 50%;
+  background: #07101a;
+  font-size: 21px;
+}
 
-        <div class="panel daily-preview">
-          <div class="panel-title"><span>📅</span><b>OPÉRATIONS DU JOUR</b><button data-nav="missions">TOUT VOIR</button></div>
-          <div id="dailyPreview"></div>
-        </div>
-      </section>
+.planet-building-head strong {
+  display: block;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
 
-      <section class="screen" data-screen="buildings">
-        <div class="screen-head"><div><small>INFRASTRUCTURES</small><h2>Colonie minière</h2></div><span class="sector-badge" id="buildingSector">Astéroïde Nova</span></div>
-        <div id="buildingList" class="building-list"></div>
-      </section>
+.planet-building-head small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 8px;
+  line-height: 1.4;
+}
 
-      <section class="screen" data-screen="sectors">
-        <div class="screen-head"><div><small>CARTOGRAPHIE</small><h2>Carte galactique</h2></div><span id="sectorCount">1 / 32</span></div>
-        <div class="galaxy-map" id="galaxyMap"></div>
-        <div class="panel sector-detail" id="sectorDetail"></div>
-      </section>
+.planet-building-head > b {
+  color: var(--cyan);
+  font-size: 11px;
+  font-weight: 500;
+}
 
-      <section class="screen" data-screen="tech">
-        <div class="screen-head"><div><small>RECHERCHE & DÉVELOPPEMENT</small><h2>Arbre technologique</h2></div><span id="techCount">0 / 30</span></div>
-        <div id="techTree" class="tech-tree"></div>
-      </section>
+.galaxy-map {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-template-rows: repeat(4, minmax(125px, 1fr));
+  gap: 0;
+  min-height: 610px;
+  padding: 22px;
+  isolation: isolate;
+}
 
-      <section class="screen" data-screen="missions">
-        <div class="screen-head"><div><small>ORDRES DE MISSION</small><h2>Objectifs</h2></div><span id="missionCount">0</span></div>
-        <div class="mission-tabs">
-          <button class="active" data-mtab="daily">QUOTIDIEN</button>
-          <button data-mtab="campaign">CAMPAGNE</button>
-          <button data-mtab="weekly">HEBDOMADAIRE</button>
-        </div>
-        <div id="missionList"></div>
-      </section>
+.map-grid-lines {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background-image:
+    linear-gradient(rgba(102,217,255,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(102,217,255,.035) 1px, transparent 1px);
+  background-size: 12.5% 25%;
+}
 
-      <section class="screen" data-screen="prestige">
-        <div class="ascension">
-          <small>PROGRESSION PERMANENTE</small><h2>ASCENSION</h2>
-          <div class="prestige-ring"><b id="prestigeBig">P0</b><span>niveau</span></div>
-          <p id="prestigeText">Développe ton empire avant de franchir le seuil d'ascension.</p>
-          <div class="prestige-stats"><span>RUN <b id="runTotal">0</b></span><span>OBJECTIF <b id="prestigeTarget">0</b></span></div>
-          <button id="prestigeBtn" class="primary wide" disabled>ASCENSIONNER</button>
-        </div>
-      </section>
+.galaxy-core {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: -1;
+  width: 150px;
+  height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(102,217,255,.14);
+  border-radius: 50%;
+  color: rgba(102,217,255,.7);
+  font-size: 30px;
+  box-shadow: 0 0 80px rgba(76,141,255,.08), inset 0 0 40px rgba(102,217,255,.04);
+}
 
-      <section class="screen" data-screen="account">
-        <div class="screen-head"><div><small>IDENTITÉ DU COMMANDANT</small><h2>Compte</h2></div><span id="cloudState">LOCAL</span></div>
-        <div class="auth-box">
-          <div id="authLoggedOut">
-            <input id="usernameInput" maxlength="20" placeholder="Pseudo">
-            <input id="passwordInput" type="password" placeholder="Mot de passe">
-            <input id="emailInput" type="email" placeholder="E-mail (pour récupération)">
-            <button id="createAccount" class="primary wide">CRÉER UN COMPTE</button>
-            <button id="loginAccount" class="secondary wide">SE CONNECTER</button>
-            <p class="hint">La V2 utilise Supabase pour la sauvegarde multi-appareils. L'e-mail sert à la récupération du compte.</p>
-          </div>
-          <div id="authLoggedIn" hidden>
-            <div class="profile-card"><span class="avatar">◉</span><div><small>COMMANDANT</small><h3 id="profileName">Mineur</h3><p id="profileEmail"></p></div></div>
-            <button id="logoutAccount" class="secondary wide">SE DÉCONNECTER</button>
-          </div>
-        </div>
-        <div class="panel"><div class="panel-title"><b>SÉCURITÉ</b></div><p class="hint">La progression locale reste active comme filet de sécurité. La synchronisation cloud sera activée une fois les tables et règles Supabase validées.</p></div>
-      </section>
-    </main>
+.sector-node {
+  position: relative;
+  left: auto !important;
+  top: auto !important;
+  transform: none;
+  justify-self: center;
+  align-self: center;
+  width: 92px;
+  height: 92px;
+  z-index: 2;
+}
 
-    <nav class="bottom-nav">
-      <button class="active" data-nav="control"><span>⌂</span>Centre</button>
-      <button data-nav="buildings"><span>⛏</span>Colonie</button>
-      <button data-nav="sectors"><span>◈</span>Secteurs</button>
-      <button data-nav="tech"><span>✦</span>Tech</button>
-      <button data-nav="missions"><span>☷</span>Missions</button>
-      <button data-nav="prestige"><span>♜</span>Ascension</button>
-    </nav>
-  </div>
-  <div id="toast"></div>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="game.js"></script>
-</body>
-</html>
+.sector-node:hover {
+  transform: scale(1.07);
+}
+
+.sector-node.active {
+  transform: scale(1.1);
+}
+
+.sector-node.active:hover {
+  transform: scale(1.1);
+}
+
+.sector-node em {
+  margin-top: 2px;
+  color: var(--cyan);
+  font-size: 6px;
+  font-style: normal;
+}
+
+.tech-tree {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: start;
+}
+
+.tech-branch {
+  min-width: 0;
+  position: relative;
+  padding: 12px 10px 14px;
+}
+
+.tech-branch-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.tech-branch-head span {
+  color: var(--cyan);
+  font-size: 15px;
+}
+
+.tech-branch-head h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+
+.tech-chain {
+  position: relative;
+}
+
+.tech-chain::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  top: 10px;
+  bottom: 10px;
+  width: 1px;
+  background: linear-gradient(var(--cyan), #1b2a3d 70%, transparent);
+  opacity: .35;
+}
+
+.tech-node {
+  position: relative;
+  margin: 0 0 8px 0;
+  padding: 10px 9px 9px 24px;
+}
+
+.tech-node-dot {
+  position: absolute;
+  left: 4px;
+  top: 15px;
+  width: 9px;
+  height: 9px;
+  border: 1px solid #41647f;
+  border-radius: 50%;
+  background: #08101a;
+}
+
+.tech-node.owned .tech-node-dot {
+  border-color: var(--green);
+  background: var(--green);
+  box-shadow: 0 0 10px rgba(98,230,164,.25);
+}
+
+.daily-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid #142131;
+  color: #9fb3c7;
+  font-size: 10px;
+}
+
+.daily-row:last-child {
+  border-bottom: 0;
+}
+
+.daily-row b {
+  color: var(--gold);
+  font-size: 9px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+@media (max-width: 1000px) {
+  .tech-tree {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .galaxy-map {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-rows: repeat(8, minmax(95px, 1fr));
+    min-height: 800px;
+    padding: 12px;
+  }
+
+  .map-grid-lines {
+    background-size: 25% 12.5%;
+  }
+
+  .sector-node {
+    width: 68px;
+    height: 68px;
+  }
+
+  .galaxy-core {
+    width: 105px;
+    height: 105px;
+  }
+
+  .planet-building-head {
+    grid-template-columns: 38px 1fr auto;
+    padding: 10px;
+  }
+
+  .planet-building-head small {
+    font-size: 7px;
+  }
+
+  .tech-tree {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* =========================================================
+   V2.2 — EVENEMENTS, HORS-LIGNE ET SUCCES
+========================================================= */
+
+.offline-panel {
+  margin-top: 10px;
+  background:
+    linear-gradient(135deg, rgba(12,22,35,.92), rgba(7,11,18,.92));
+}
+
+.offline-panel .hint {
+  margin: 8px 0 0;
+}
+
+.achievement-done {
+  border-color: #315b4d !important;
+  background:
+    linear-gradient(135deg, rgba(49,91,77,.10), var(--panel));
+}
+
+.achievement-done .bar i {
+  background: var(--green);
+  box-shadow: 0 0 8px rgba(98,230,164,.25);
+}
+
+.mission-tabs {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.mission-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.mission-tabs button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.event-strip {
+  position: relative;
+  overflow: hidden;
+}
+
+.event-strip::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--cyan);
+  box-shadow: 0 0 14px rgba(102,217,255,.4);
+}
+
+@media (max-width:760px) {
+  .offline-panel {
+    margin-top: 7px;
+  }
+
+  .mission-tabs button {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+}
