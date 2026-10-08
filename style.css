@@ -347,3 +347,10 @@ button,input{font:inherit}button{color:inherit}
 /* V2.5 mobile: prevent accidental double-tap page zoom while preserving scrolling. */
 html,body,#app{touch-action:manipulation;}
 button,.mine-button,.panel-title button,.mission-tabs button,.buy,.primary,.secondary{touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
+
+
+/* V2.7 — alert dots on actionable navigation tabs */
+.bottom-nav button{position:relative}
+.bottom-nav .nav-label{display:inline}
+.nav-alert{position:absolute;top:9px;right:calc(50% - 18px);width:7px;height:7px;border-radius:50%;background:#ff3b4d;box-shadow:0 0 0 2px rgba(5,7,13,.9),0 0 9px rgba(255,59,77,.75);animation:navPulse 1.4s ease-in-out infinite}
+@keyframes navPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.72);opacity:.72}}
