@@ -379,3 +379,9 @@ button,.mine-button,.panel-title button,.mission-tabs button,.buy,.primary,.seco
   .rank-row{grid-template-columns:28px 1fr auto;}
   .rank-row small{grid-column:2 / -1;}
 }
+
+/* V3 */
+.mission-tabs{overflow-x:auto;scrollbar-width:none}
+.mission-tabs::-webkit-scrollbar{display:none}
+.quest-card{border-left:2px solid rgba(118,226,255,.45)}
+.quest-card .mission-head small{font-size:.72rem;opacity:.65;margin-left:6px}
