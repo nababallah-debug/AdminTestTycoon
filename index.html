@@ -147,8 +147,20 @@
       <button data-nav="prestige"><span>♜</span><span class="nav-label">Ascension</span><i id="navAlertPrestige" class="nav-alert" hidden></i></button>
     </nav>
   </div>
+  <section id="accountReminder" class="account-reminder" hidden aria-labelledby="accountReminderTitle" role="dialog" aria-modal="true">
+    <div class="account-reminder-backdrop"></div>
+    <div class="account-reminder-card">
+      <span class="account-reminder-icon" aria-hidden="true">◉</span>
+      <p class="eyebrow">PROTÈGE TA PROGRESSION</p>
+      <h2 id="accountReminderTitle">Ta colonie reste sur cet appareil</h2>
+      <p class="account-reminder-copy">Crée un compte pour retrouver ta partie et la synchroniser sur tes appareils. Tu peux continuer en mode local.</p>
+      <button id="reminderCreateAccount" class="primary wide">CRÉER UN COMPTE</button>
+      <button id="reminderLoginAccount" class="secondary wide">SE CONNECTER</button>
+      <button id="reminderLater" class="reminder-later">PLUS TARD</button>
+    </div>
+  </section>
   <div id="toast"></div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="game.js?v=4.3"></script>
+  <script src="game.js?v=4.4"></script>
 </body>
 </html>
