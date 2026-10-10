@@ -1,9 +1,11 @@
 {
-  "name": "Space Mining Tycoon V4.0",
+  "name": "Space Mining Tycoon V4.1",
   "short_name": "Space Mining",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#05070d",
   "theme_color": "#05070d",
-  "icons": []
+  "icons": [
+    {"src":"favicon.svg?v=4.1","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
 }
