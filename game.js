@@ -246,7 +246,7 @@ weekly:{key:weekKey(),claimed:[],base:{clicks:0,lifetime:0,run:0,spent:0,buildin
 campaignClaimed:[],
 achievements:[],
 event:{id:null,activeUntil:0,nextAt:0},
-offlineLast:0,lastAt:Date.now(),account:null,lastAccountUserId:null,localUpdatedAt:Date.now(),syncRevision:0,clickStreak:0,lastClickAt:0,clickMilestones:0,quests:{},cloudMeta:{lastPulledAt:0,lastPushedAt:0}};
+offlineLast:0,lastAt:Date.now(),account:null,lastAccountUserId:null,seenWorlds:[0],localUpdatedAt:Date.now(),syncRevision:0,clickStreak:0,lastClickAt:0,clickMilestones:0,quests:{},cloudMeta:{lastPulledAt:0,lastPushedAt:0}};
 }
 function migrate(z){
  const base=fresh();z=Object.assign(base,z||{});z.buildings=Object.assign({},base.buildings,z.buildings||{});z.research=z.research||{};z.daily=z.daily||base.daily;z.weekly=z.weekly||base.weekly;const weeklyHasBase=!!(z.weekly&&z.weekly.base&&typeof z.weekly.base==='object');z.weekly.base=Object.assign({},base.weekly.base,z.weekly.base||{});
@@ -260,6 +260,9 @@ z.offlineLast=Number(z.offlineLast)||0;
 z.lastAt=Number(z.lastAt)||Date.now();
  z.account=z.account&&typeof z.account==='object'?z.account:null;
  z.lastAccountUserId=z.lastAccountUserId||z.account?.userId||null;
+ const oldUnlocked=[0];for(let w=1;w<WORLDS.length;w++)if(BUILDING_ROLES.every((_,b)=>(Number(z.buildings[(w-1)+'-'+b])||0)>=1))oldUnlocked.push(w);
+ z.seenWorlds=Array.isArray(z.seenWorlds)?[...new Set(z.seenWorlds.map(Number).filter(w=>Number.isInteger(w)&&w>=0&&w<WORLDS.length))]:oldUnlocked;
+ if(!z.seenWorlds.includes(0))z.seenWorlds.push(0);
  z.localUpdatedAt=Math.max(0,Number(z.localUpdatedAt)||Number(z.lastAt)||0);
  z.syncRevision=Math.max(0,Math.floor(Number(z.syncRevision)||0));
  z.quests=z.quests&&typeof z.quests==='object'?z.quests:{};
@@ -297,10 +300,11 @@ function autoRate(){let r=0;WORLDS.forEach((_,w)=>BUILDING_ROLES.forEach((__,b)=
 function earn(x){if(!Number.isFinite(x)||x<=0)return;state.money+=x;state.runTotal+=x;state.lifetimeTotal+=x;state.xp+=Math.max(1,Math.floor(Math.log10(Math.max(10,x))+2));state.level=Math.floor(Math.sqrt(state.xp/80))+1}
 function spend(x){state.money-=x;state.spent+=x}
 function toast(t){const e=document.getElementById('toast');if(!e)return;e.textContent=t;e.classList.add('toast-show');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('toast-show'),2200)}
-function nav(name){screen=name;if(name==='account')loadLeaderboard(true);document.querySelectorAll('.screen').forEach(x=>x.classList.toggle('active',x.dataset.screen===name));document.querySelectorAll('[data-nav]').forEach(x=>x.classList.toggle('active',x.dataset.nav===name));render()}
+function nav(name){screen=name;if(name==='account')loadLeaderboard(true);if(name==='sectors')acknowledgeUnlockedSectors();document.querySelectorAll('.screen').forEach(x=>x.classList.toggle('active',x.dataset.screen===name));document.querySelectorAll('[data-nav]').forEach(x=>x.classList.toggle('active',x.dataset.nav===name));render()}
 function hasTechAlert(){return BRANCH_ORDER.some(br=>BRANCHES[br].some((t,i)=>!techOwned(t[0])&&state.money>=t[2]&&(i===0||techOwned(BRANCHES[br][i-1][0]))))}
 function hasMissionAlert(){ensureDaily();ensureWeekly();ensureMissionState();const ds=dailySet();if(ds.some((d,i)=>!state.daily.claimed.includes(i)&&dailyValue(d)>=d[2]))return true;if(CAMPAIGN.some(m=>!state.campaignClaimed.includes(m[0])&&missionValue(m)>=m[3]))return true;if(WEEKLY.some((m,i)=>!state.weekly.claimed.includes(i)&&weeklyValue(m)>=m[3]))return true;if(QUESTS.some(q=>questDone(q)))return true;return ACHIEVEMENTS.some(a=>!state.achievementClaimed.includes(a[0])&&achievementValue(a)>=a[4])}
-function hasSectorAlert(){for(let i=0;i<WORLDS.length;i++){if(i!==selectedWorld&&worldUnlocked(i))return true}return false}
+function acknowledgeUnlockedSectors(){if(!Array.isArray(state.seenWorlds))state.seenWorlds=[0];let changed=false;for(let i=0;i<WORLDS.length;i++)if(worldUnlocked(i)&&!state.seenWorlds.includes(i)){state.seenWorlds.push(i);changed=true}if(changed)save()}
+function hasSectorAlert(){return WORLDS.some((_,i)=>worldUnlocked(i)&&!state.seenWorlds?.includes(i))}
 function ascensionReady(){const allPlanets=BUILDING_ROLES.every((_,b)=>WORLDS.every((__,w)=>(state.buildings[w+'-'+b]||0)>=10));return allPlanets}
 function ascensionTarget(){return 1e14*Math.pow(18,state.prestige)}
 function hasPrestigeAlert(){return ascensionReady()&&state.runTotal>=ascensionTarget()}
@@ -323,7 +327,7 @@ function renderBuildings(){
 function renderMap(){
  const box=document.getElementById('galaxyMap');if(!box)return;box.innerHTML='<div class="map-grid-lines"></div><div class="galaxy-core">✦</div>';
  const cols=8,rows=4;
- WORLDS.forEach((w,i)=>{const col=i%cols,row=Math.floor(i/cols);const el=document.createElement('button');el.className='sector-node '+(i===selectedWorld?'active ':'')+(worldUnlocked(i)?'':'locked');el.style.setProperty('--col',col+1);el.style.setProperty('--row',row+1);el.innerHTML=`<span>${w[0]}</span><small>${String(i+1).padStart(2,'0')} · ${w[1]}</small><em>×${w[3]}</em>`;el.onclick=()=>{if(worldUnlocked(i)){selectedWorld=i;localStorage.setItem('sm-v2-world',i);render()}else toast('Secteur verrouillé')};box.appendChild(el)});
+ WORLDS.forEach((w,i)=>{const col=i%cols,row=Math.floor(i/cols);const el=document.createElement('button');el.className='sector-node '+(i===selectedWorld?'active ':'')+(worldUnlocked(i)?'':'locked');el.style.setProperty('--col',col+1);el.style.setProperty('--row',row+1);el.innerHTML=`<span>${w[0]}</span><small>${String(i+1).padStart(2,'0')} · ${w[1]}</small><em>×${w[3]}</em>`;el.onclick=()=>{if(worldUnlocked(i)){selectedWorld=i;if(!state.seenWorlds.includes(i))state.seenWorlds.push(i);localStorage.setItem('sm-v2-world',i);save();render()}else toast('Secteur verrouillé')};box.appendChild(el)});
  const w=WORLDS[selectedWorld];document.getElementById('sectorDetail').innerHTML=`<div class="panel-title"><b>${w[0]} ${w[1]}</b><span style="margin-left:auto">×${w[3]}</span></div><p class="hint">Secteur ${selectedWorld+1}/${WORLDS.length} · Développement ${Math.round(worldProgress(selectedWorld)/(BUILDING_ROLES.length*20)*100)}% · Indice industriel ×${worldFactor(selectedWorld).toFixed(2)} · ${worldUnlocked(selectedWorld)?'SECTEUR ACTIF':'VERROUILLÉ'}</p>`;
 }
 function renderTech(){
@@ -377,12 +381,12 @@ function mergeSnapshots(first,second){
  merged.prestige=Math.max(Number(local.prestige)||0,Number(cloud.prestige)||0);
  if(samePrestige){merged.money=Math.max(Number(local.money)||0,Number(cloud.money)||0);merged.runTotal=Math.max(Number(local.runTotal)||0,Number(cloud.runTotal)||0);merged.buildings=Object.fromEntries(Object.keys({...local.buildings,...cloud.buildings}).map(k=>[k,Math.max(Number(local.buildings?.[k])||0,Number(cloud.buildings?.[k])||0)]))}
  merged.lifetimeTotal=Math.max(Number(local.lifetimeTotal)||0,Number(cloud.lifetimeTotal)||0);merged.xp=Math.max(Number(local.xp)||0,Number(cloud.xp)||0);merged.level=Math.max(Number(local.level)||1,Number(cloud.level)||1);merged.clicks=Math.max(Number(local.clicks)||0,Number(cloud.clicks)||0);merged.spent=Math.max(Number(local.spent)||0,Number(cloud.spent)||0);merged.crystals=Math.max(Number(local.crystals)||0,Number(cloud.crystals)||0);
- merged.research={...(local.research||{}),...(cloud.research||{})};merged.achievements=unionValues(local.achievements,cloud.achievements);merged.achievementClaimed=unionValues(local.achievementClaimed,cloud.achievementClaimed);merged.campaignClaimed=unionValues(local.campaignClaimed,cloud.campaignClaimed);
+ merged.research={...(local.research||{}),...(cloud.research||{})};merged.achievements=unionValues(local.achievements,cloud.achievements);merged.achievementClaimed=unionValues(local.achievementClaimed,cloud.achievementClaimed);merged.campaignClaimed=unionValues(local.campaignClaimed,cloud.campaignClaimed);merged.seenWorlds=unionValues(local.seenWorlds,cloud.seenWorlds);
  merged.daily=mergeCycle(local.daily,cloud.daily);merged.weekly=mergeCycle(local.weekly,cloud.weekly);merged.quests=mergeQuestState(local.quests,cloud.quests);merged.lastAt=Math.max(Number(local.lastAt)||0,Number(cloud.lastAt)||0);merged.offlineLast=Math.max(Number(local.offlineLast)||0,Number(cloud.offlineLast)||0);merged.localUpdatedAt=Math.max(Number(local.localUpdatedAt)||0,Number(cloud.localUpdatedAt)||0);merged.syncRevision=Math.max(Number(local.syncRevision)||0,Number(cloud.syncRevision)||0);merged.lastAccountUserId=local.lastAccountUserId||cloud.lastAccountUserId||null;merged.account=preferred.account||other.account||null;merged.cloudMeta={...(other.cloudMeta||{}),...(preferred.cloudMeta||{})};
  return migrate(merged)
 }
 function comparableSave(value){const copy=cloneState(value);delete copy.account;delete copy.cloudMeta;delete copy.localUpdatedAt;delete copy.syncRevision;return copy}
-function authErrorMessage(error){const message=String(error?.message||'').toLowerCase();if(message.includes('invalid login credentials'))return 'Adresse e-mail ou mot de passe incorrect.';if(message.includes('email not confirmed'))return 'Confirme ton adresse e-mail avant de te connecter.';if(message.includes('user already registered'))return 'Un compte existe déjà avec cette adresse e-mail.';if(message.includes('password should be at least'))return 'Le mot de passe doit contenir au moins 8 caractères.';if(message.includes('rate limit'))return 'Trop de demandes. Attends un peu puis réessaie.';if(message.includes('failed to fetch')||message.includes('network'))return 'Connexion impossible. Vérifie ta connexion Internet.';if(message.includes('score cannot decrease')||message.includes('prestige cannot decrease')||message.includes('level cannot decrease'))return 'La sauvegarde cloud contient une progression plus récente. Relance la synchronisation.';return 'Une erreur est survenue. Réessaie dans quelques instants.'}
+function authErrorMessage(error){const message=String(error?.message||'').toLowerCase();if(message==='session'||message.includes('session expired')||message.includes('invalid session'))return 'Session expirée · reconnecte-toi pour reprendre la synchronisation. Ta partie reste sauvegardée sur cet appareil.';if(message.includes('invalid login credentials'))return 'Adresse e-mail ou mot de passe incorrect.';if(message.includes('email not confirmed'))return 'Confirme ton adresse e-mail avant de te connecter.';if(message.includes('user already registered'))return 'Un compte existe déjà avec cette adresse e-mail.';if(message.includes('password should be at least'))return 'Le mot de passe doit contenir au moins 8 caractères.';if(message.includes('rate limit'))return 'Trop de demandes. Attends un peu puis réessaie.';if(message.includes('failed to fetch')||message.includes('network'))return 'Connexion impossible. Vérifie ta connexion Internet.';if(message.includes('score cannot decrease')||message.includes('prestige cannot decrease')||message.includes('level cannot decrease'))return 'La sauvegarde cloud contient une progression plus récente. Relance la synchronisation.';return 'Synchronisation indisponible · ta progression reste conservée localement. Réessaie après avoir vérifié ta connexion.'}
 function setCloudMessage(message,error=false){cloudMessage=message;cloudLastError=error?message:'';renderSyncIndicators()}
 function syncPresentation(){if(!state.account)return {state:'local',badge:'LOCAL',label:'SAUVEGARDE LOCALE'};if(cloudBusy)return {state:'sync',badge:'SYNCHRONISATION',label:'SYNCHRONISATION'};if(cloudLastError)return {state:'error',badge:'À RÉESSAYER',label:'SYNCHRO EN ATTENTE'};if(cloudDirty)return {state:'sync',badge:'À ENVOYER',label:'SAUVEGARDE EN ATTENTE'};return {state:'cloud',badge:'CLOUD ACTIF',label:'CLOUD SYNCHRONISÉ'}}
 function renderSyncIndicators(){const status=syncPresentation();const dot=document.getElementById('accountDot');if(dot){dot.dataset.state=status.state;dot.textContent=status.badge}const badge=document.getElementById('cloudState');if(badge)badge.textContent=status.badge;const header=document.getElementById('headerSyncLabel');if(header)header.textContent=status.label;const message=document.getElementById('cloudStatus');if(message)message.textContent=cloudBusy?'Synchronisation en cours…':cloudMessage;const title=document.getElementById('syncCardTitle');if(title)title.textContent=cloudLastError?'Synchronisation à vérifier':cloudDirty?'Progression en attente':'Sauvegarde cloud';const last=document.getElementById('syncLast');if(last){const date=lastCloudSync||Number(state.account?.lastSync)||Number(state.cloudMeta?.lastPushedAt)||0;last.textContent=date?'Dernière sauvegarde : '+new Date(date).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}):'Dernière sauvegarde : en attente'}const hint=document.getElementById('authHint');if(hint&&!state.account)hint.textContent=sb?'La progression reste enregistrée sur cet appareil tant que tu joues en mode local.':'Le service de compte est momentanément indisponible. Ta partie locale reste accessible.'}
@@ -408,7 +412,7 @@ async function syncCloud(force=false){
  if(!sb||!state.account?.userId||cloudBusy)return false;if(typeof navigator!=='undefined'&&navigator.onLine===false){setCloudMessage('Hors ligne · la partie est conservée ici.');return false}if(!force&&Date.now()<cloudRetryAt)return false;if(!force&&Date.now()-lastCloudSync<CLOUD_SYNC_MS)return true;
  cloudBusy=true;const startRevision=Number(state.syncRevision)||0;renderAccount();
  try{
-  const session=await getCloudSession();if(!session)throw new Error('session');if(session.user.id!==state.account.userId){setTimeout(()=>activateSession(session.user),0);throw new Error('session changed')}
+  const session=await getCloudSession();if(!session){const oldAccount=state.account;state.lastAccountUserId=oldAccount?.userId||state.lastAccountUserId||null;state.account=null;cloudDirty=false;cloudRestoreDone=false;cloudLastError='';save(false);setCloudMessage('Session expirée · reconnecte-toi. Ta progression reste sauvegardée sur cet appareil.');render();return false}if(session.user.id!==state.account.userId){const mismatchedAccount=state.account;state.lastAccountUserId=mismatchedAccount.userId;state.account=null;save(false);setCloudMessage('Session d’un autre compte détectée · reconnecte-toi au compte de cette sauvegarde.');render();return false}
   const localSnapshot=cloneState(state);const {data,error}=await sb.from(CLOUD_TABLE).select('state,updated_at').eq('user_id',session.user.id).maybeSingle();if(error)throw error;
   let merged=data?.state&&typeof data.state==='object'?mergeSnapshots(localSnapshot,data.state):localSnapshot;
   const currentSnapshot=cloneState(state);if((Number(currentSnapshot.syncRevision)||0)!==startRevision)merged=mergeSnapshots(merged,currentSnapshot);
@@ -452,23 +456,6 @@ async function loadLeaderboard(force=false){
 }
 function escapeHTML(value){return String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))}
 async function logout(){if(!state.account)return;try{if(cloudDirty){const synced=await syncCloud(true);if(!synced){toast('Synchronisation impossible · tu restes connecté et ta partie est conservée.');return}}if(sb){const {error}=await sb.auth.signOut({scope:'local'});if(error)throw error}if(state.account){state.lastAccountUserId=state.account.userId;state.account=null;cloudDirty=false;save(false);render();toast('Déconnexion · progression conservée localement')}}catch(error){toast(authErrorMessage(error))}}
-async function loadLeaderboard(force=false){
- const box=document.getElementById('leaderboardList');if(!box||!sb||leaderboardBusy||(!force&&Date.now()-lastLeaderboard<30000))return;
- leaderboardBusy=true;
- box.innerHTML='<p class="hint">Chargement du classement…</p>';
- try{
-   const {data,error}=await sb.from('leaderboard').select('nickname,total,prestige,level').order('total',{ascending:false}).order('prestige',{ascending:false}).order('level',{ascending:false}).limit(10);
-   if(error)throw error;
-   lastLeaderboard=Date.now();box.innerHTML=data?.length?data.map((p,i)=>`<div class="rank-row"><b>#${i+1}</b><span>${p.nickname||'Mineur'}</span><strong>${fmt(Number(p.total||0))}</strong><small>P${p.prestige||0} · N${p.level||1}</small></div>`).join(''):'<p class="hint">Aucun commandant classé pour le moment.</p>';
- }catch(e){box.innerHTML='<p class="hint">Classement indisponible.</p>';console.warn('Leaderboard',e)}finally{leaderboardBusy=false}
-}
-
-
-async function logout(){
- if(sb)await sb.auth.signOut();
- state.account=null;cloudRestoreDone=false;cloudDirty=false;cloudRetryAt=0;save();render();toast('Déconnexion réussie · sauvegarde locale conservée')
-}
-
 function buyBuilding(b){const c=cost(selectedWorld,b);if(state.money<c){toast('Crédits insuffisants');return}spend(c);const k=selectedWorld+'-'+b;state.buildings[k]=(state.buildings[k]||0)+1;state.xp+=20;save();render()}
 function buyTech(id){let t=null;for(const br of BRANCH_ORDER){const found=BRANCHES[br].find(x=>x[0]===id);if(found){t=found;break}}if(!t||techOwned(id)||state.money<t[2])return;const br=BRANCH_ORDER.find(k=>BRANCHES[k].some(x=>x[0]===id));const arr=BRANCHES[br],idx=arr.findIndex(x=>x[0]===id);if(idx>0&&!techOwned(arr[idx-1][0])){toast('Technologie précédente requise');return}spend(t[2]);state.research[id]=true;state.xp+=500;save();toast('Technologie acquise');render()}
 function spawnClickFx(amount,critical=false){
@@ -537,6 +524,7 @@ window.addEventListener('online',()=>{if(state.account){cloudLastError='';cloudR
 window.addEventListener('offline',()=>{if(state.account)setCloudMessage('Hors ligne · les changements restent en attente.')});
 if(sb)sb.auth.onAuthStateChange((event,session)=>{
  if(event==='PASSWORD_RECOVERY'){passwordRecoveryMode=true;renderAccount();return}
+ if(event==='INITIAL_SESSION'&&!session&&state.account){state.lastAccountUserId=state.account.userId||state.lastAccountUserId||null;state.account=null;cloudDirty=false;cloudRestoreDone=true;cloudRetryAt=0;cloudLastError='';save(false);setCloudMessage('Session expirée · reconnecte-toi. Ta progression reste sauvegardée sur cet appareil.');render();return}
  if(event==='SIGNED_OUT'){
   if(state.account)state.lastAccountUserId=state.account.userId;state.account=null;cloudRestoreDone=false;cloudDirty=false;cloudRetryAt=0;cloudLastError='';setCloudMessage('Déconnecté · progression conservée sur cet appareil.');save(false);render();return
  }
