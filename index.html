@@ -6,27 +6,23 @@
   <meta name="theme-color" content="#05070d">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Space Mining Tycoon — V3.2</title>
+  <title>Space Mining Tycoon — V4.0</title>
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="style.css?v=3.2">
-
-<style id="v32-critical">
-html,body{margin:0;min-height:100%;background:#05070d;color:#e8f1ff;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;overflow-x:hidden}button,input{font:inherit}button{cursor:pointer}#app{min-height:100vh;padding-bottom:80px}.bottom-nav{position:fixed!important;left:0!important;right:0!important;bottom:0!important;transform:none!important;width:100vw!important;max-width:none!important;margin:0!important;z-index:1000;display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr));box-sizing:border-box;overflow:hidden}.bottom-nav button{min-width:0!important;width:100%!important;box-sizing:border-box;display:flex!important;flex-direction:column;align-items:center;justify-content:center}.topbar{display:flex;align-items:center;justify-content:space-between}
-</style>
+  <link rel="stylesheet" href="style.css?v=4.0">
 </head>
 <body>
   <div id="app">
     <header class="topbar">
       <button class="brand" data-nav="control">
         <span class="brand-mark">◉</span>
-        <span><b>SPACE MINING</b><small>TYCOON // V3.2</small></span>
+        <span><b>SPACE MINING</b><small>TYCOON // V4.0</small></span>
       </button>
       <div class="top-stats">
         <span>CRÉDITS <b id="money">0</b></span>
         <span>PROD <b id="rate">0/s</b></span>
         <span>PRESTIGE <b id="prestige">P0</b></span>
       </div>
-      <button class="account-chip" data-nav="account"><span id="accountDot">LOCAL</span><b id="accountName">Mineur</b></button>
+      <button class="account-chip" data-nav="account"><span id="accountDot" class="account-status-dot">LOCAL</span><b id="accountName">Mineur</b><small id="headerSyncLabel">SAUVEGARDE LOCALE</small></button>
     </header>
 
     <main id="screens">
@@ -101,26 +97,42 @@ html,body{margin:0;min-height:100%;background:#05070d;color:#e8f1ff;font-family:
         </div>
       </section>
 
-      <section class="screen" data-screen="account">
-        <div class="screen-head"><div><small>IDENTITÉ DU COMMANDANT</small><h2>Compte</h2></div><span id="cloudState">LOCAL</span></div>
-        <div class="auth-box">
-          <div id="authLoggedOut">
-            <input id="usernameInput" maxlength="20" placeholder="Pseudo">
-            <input id="passwordInput" type="password" placeholder="Mot de passe">
-            <input id="emailInput" type="email" placeholder="E-mail (pour récupération)">
-            <button id="createAccount" class="primary wide">CRÉER UN COMPTE</button>
-            <button id="loginAccount" class="secondary wide">SE CONNECTER</button>
-            <button id="recoverPassword" class="link-button wide">MOT DE PASSE OUBLIÉ</button>
-            <p class="hint">Compte réel Supabase : pseudo + mot de passe + e-mail de récupération. Ta progression est synchronisée dans le cloud et récupérable sur un autre appareil.</p>
+      <section class="screen account-screen" data-screen="account">
+        <div class="screen-head"><div><small>IDENTITÉ & SAUVEGARDE</small><h2>Compte commandant</h2></div><span id="cloudState" class="cloud-badge">LOCAL</span></div>
+        <div class="account-layout">
+          <div class="auth-box panel auth-panel">
+            <div id="authLoggedOut">
+              <div class="account-intro"><span class="account-symbol">◉</span><div><strong>Retrouve ta colonie partout</strong><p>Crée un compte ou connecte-toi pour sauvegarder ta progression sur tes appareils.</p></div></div>
+              <label class="field-label" for="usernameInput">Pseudo de commandant</label>
+              <input id="usernameInput" maxlength="20" autocomplete="nickname" placeholder="Ex. NovaMiner">
+              <label class="field-label" for="emailInput">Adresse e-mail</label>
+              <input id="emailInput" type="email" autocomplete="email" inputmode="email" placeholder="nom@exemple.com">
+              <label class="field-label" for="passwordInput">Mot de passe</label>
+              <input id="passwordInput" type="password" minlength="8" autocomplete="current-password" placeholder="8 caractères minimum">
+              <div class="auth-actions"><button id="createAccount" class="primary wide">CRÉER UN COMPTE</button><button id="loginAccount" class="secondary wide">SE CONNECTER</button></div>
+              <button id="recoverPassword" class="link-button wide">MOT DE PASSE OUBLIÉ ?</button>
+              <p class="hint" id="authHint" aria-live="polite">La progression reste enregistrée sur cet appareil tant que tu joues en mode local.</p>
+            </div>
+            <div id="passwordRecoveryPanel" class="recovery-panel" hidden>
+              <div class="account-intro"><span class="account-symbol">✦</span><div><strong>Nouveau mot de passe</strong><p>Choisis un nouveau mot de passe pour ton compte.</p></div></div>
+              <label class="field-label" for="newPasswordInput">Nouveau mot de passe</label>
+              <input id="newPasswordInput" type="password" minlength="8" autocomplete="new-password" placeholder="8 caractères minimum">
+              <button id="saveNewPassword" class="primary wide">ENREGISTRER LE MOT DE PASSE</button>
+              <button id="cancelPasswordRecovery" class="link-button wide">RETOUR</button>
+            </div>
+            <div id="authLoggedIn" hidden>
+              <div class="profile-card"><span class="avatar">◉</span><div><small>COMMANDANT</small><h3 id="profileName">Mineur</h3><p id="profileEmail"></p></div><span class="profile-online">EN LIGNE</span></div>
+              <div class="account-stats"><div><small>CRÉDITS GAGNÉS</small><b id="accountStatTotal">0</b></div><div><small>NIVEAU</small><b id="accountStatLevel">1</b></div><div><small>ASCENSIONS</small><b id="accountStatPrestige">P0</b></div></div>
+              <div class="sync-card"><span class="sync-icon">☁</span><div><strong id="syncCardTitle">Sauvegarde cloud</strong><p id="cloudStatus" aria-live="polite">Préparation de la synchronisation…</p><small id="syncLast">Dernière sauvegarde : en attente</small></div></div>
+              <button id="forceSync" class="primary wide">SYNCHRONISER MA PARTIE</button>
+              <button id="logoutAccount" class="secondary wide">SE DÉCONNECTER</button>
+            </div>
           </div>
-          <div id="authLoggedIn" hidden>
-            <div class="profile-card"><span class="avatar">◉</span><div><small>COMMANDANT</small><h3 id="profileName">Mineur</h3><p id="profileEmail"></p></div></div>
-            <button id="forceSync" class="primary wide">SYNCHRONISER MA PARTIE</button>
-            <button id="logoutAccount" class="secondary wide">SE DÉCONNECTER</button>
+          <div class="account-side">
+            <div class="panel leaderboard-panel"><div class="panel-title"><span>✦</span><b>CLASSEMENT GALACTIQUE</b></div><div id="leaderboardList"><p class="hint">Connecte-toi pour découvrir le classement.</p></div></div>
+            <div class="panel account-security"><div class="panel-title"><span>◈</span><b>PROTECTION DE LA PROGRESSION</b></div><p class="hint" id="cloudSecurityText">Ta partie locale reste disponible. Après connexion, le jeu compare les sauvegardes et conserve les progrès retrouvés.</p></div>
           </div>
         </div>
-        <div class="panel"><div class="panel-title"><b>CLASSEMENT GALACTIQUE</b></div><div id="leaderboardList"><p class="hint">Connecte-toi pour voir le classement.</p></div></div>
-        <div class="panel"><div class="panel-title"><b>SÉCURITÉ</b></div><p class="hint" id="cloudStatus">La progression locale reste disponible comme filet de sécurité. Le compte connecté sauvegarde automatiquement ta progression dans le cloud.</p></div>
       </section>
     </main>
 
@@ -135,6 +147,6 @@ html,body{margin:0;min-height:100%;background:#05070d;color:#e8f1ff;font-family:
   </div>
   <div id="toast"></div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="game.js?v=3.2"></script>
+  <script src="game.js?v=4.0"></script>
 </body>
 </html>
