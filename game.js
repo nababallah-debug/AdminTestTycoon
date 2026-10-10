@@ -85,7 +85,7 @@ const QUESTS=[
  ['investor','Investisseur','Dépenser des crédits','spend',1000000,2.3],
  ['planet','Maître de colonie','Construire sur la planète active','planetbuild',10,2.1]
 ];
-function questLevel(id){return Math.max(1,Number(state.quests?.[id]?.level)||1)}
+function questLevel(id){const slot=state.quests?.[id]||{};const savedLevel=Math.max(1,Math.floor(Number(slot.level)||1));const claimed=Math.max(0,Math.floor(Number(slot.completed)||0));return Math.min(100000,Math.max(savedLevel,claimed+1))}
 function questNeed(q){
  const lv=questLevel(q[0]);
  return Math.min(Number.MAX_SAFE_INTEGER,Math.max(1,Math.ceil(q[4]*Math.pow(q[5],lv-1))));
@@ -119,8 +119,8 @@ function ensureQuests(){
   const slot=state.quests[q[0]];
   if(!slot||typeof slot!=='object')state.quests[q[0]]={level:1,completed:0,base:0,baseByWorld:{}};
   else{
-   slot.level=Math.max(1,Math.floor(Number(slot.level)||1));
    slot.completed=Math.max(0,Math.floor(Number(slot.completed)||0));
+   slot.level=Math.min(100000,Math.max(1,Math.floor(Number(slot.level)||1),slot.completed+1));
    slot.base=Math.max(0,Number(slot.base)||0);
    slot.baseByWorld=slot.baseByWorld&&typeof slot.baseByWorld==='object'?slot.baseByWorld:{};
   }
@@ -135,7 +135,7 @@ function claimQuest(id){
  const completedLevel=questLevel(id);
  const reward=questReward(q);
  slot.level=Math.min(100000,completedLevel+1);
- slot.completed++;
+ slot.completed=completedLevel;
  earn(reward);
  if(q[3]==='planetbuild')slot.baseByWorld[selectedWorld]=questRawValue(q);
  else slot.base=questRawValue(q);
