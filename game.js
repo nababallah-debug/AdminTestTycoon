@@ -240,6 +240,12 @@ function checkAchievements(){
 let state=load();
 let selectedWorld=Math.max(0,Math.min(WORLDS.length-1,Number(localStorage.getItem('sm-v2-world')||0)));
 let screen='control';let missionTab='daily';let accountBusy=false;
+const ACCOUNT_CREATED_KEY='space-mining-account-created';
+let accountReminderDismissed=false;
+function closeAccountReminder(){const modal=document.getElementById('accountReminder');if(modal)modal.hidden=true;document.body.classList.remove('account-reminder-open')}
+function openAccountReminder(){let created=false;try{created=localStorage.getItem(ACCOUNT_CREATED_KEY)==='1'}catch{}if(state.account||created||accountReminderDismissed)return;const modal=document.getElementById('accountReminder');if(modal){modal.hidden=false;document.body.classList.add('account-reminder-open')}}
+function markAccountCreated(){try{localStorage.setItem(ACCOUNT_CREATED_KEY,'1')}catch{}closeAccountReminder()}
+function dismissAccountReminder(){accountReminderDismissed=true;closeAccountReminder()}
 
 function fresh(){
  const buildings={};WORLDS.forEach((_,w)=>BUILDING_ROLES.forEach((_,b)=>buildings[w+'-'+b]=0));
@@ -408,7 +414,7 @@ function renderAccount(){
 function stateHasProgress(value){return Number(value?.lifetimeTotal)>0||Number(value?.prestige)>0||Number(value?.clicks)>0||Object.values(value?.buildings||{}).some(Number)||Object.keys(value?.research||{}).length>0}
 function accountForUser(user){return {username:user.user_metadata?.username||state.account?.username||'Mineur',email:user.email||state.account?.email||'',userId:user.id,localSnapshotAt:Date.now(),lastSync:state.account?.lastSync||0}}
 async function activateSession(user){
- if(!user?.id)return false;const uid=user.id;const oldOwner=state.lastAccountUserId||state.account?.userId||null;const allowLocalMerge=!oldOwner||oldOwner===uid;
+ if(!user?.id)return false;markAccountCreated();const uid=user.id;const oldOwner=state.lastAccountUserId||state.account?.userId||null;const allowLocalMerge=!oldOwner||oldOwner===uid;
  if(!allowLocalMerge){try{localStorage.setItem(KEY+':account:'+oldOwner,JSON.stringify(state))}catch{}}
  const account=accountForUser(user);if(!allowLocalMerge){state=fresh();state.account=account;state.lastAccountUserId=uid;save(false)}else{state.account=account;state.lastAccountUserId=uid;save(false)}
  cloudRestoreDone=false;cloudDirty=false;cloudSyncFailures=0;cloudRetryAt=0;cloudLastError='';render();
@@ -452,7 +458,7 @@ async function restoreCloud(allowLocalMerge=true){
 async function createAccount(){
  if(authBusy)return;if(!sb){toast('Compte indisponible pour le moment.');return}const username=document.getElementById('usernameInput').value.trim(),password=document.getElementById('passwordInput').value,email=document.getElementById('emailInput').value.trim();
  if(!/^[A-Za-z0-9_ -]{3,20}$/.test(username)){toast('Choisis un pseudo de 3 à 20 caractères.');return}if(password.length<8){toast('Le mot de passe doit contenir au moins 8 caractères.');return}if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){toast('Entre une adresse e-mail valide.');return}
- authBusy=true;renderAccount();try{const {data,error}=await sb.auth.signUp({email,password,options:{data:{username},emailRedirectTo:location.href.split('#')[0]}});if(error)throw error;if(!data.user)throw new Error('signup');if(data.session){const synced=await activateSession(data.user);toast(synced?'Compte créé · sauvegarde sécurisée activée.':'Compte créé · synchronisation en attente.')}else{const hint=document.getElementById('authHint');if(hint)hint.textContent='Compte créé. Ouvre le lien reçu par e-mail pour confirmer ton adresse et activer la synchronisation.';toast('E-mail de confirmation envoyé.')}}catch(error){toast(authErrorMessage(error))}finally{authBusy=false;renderAccount()}
+ authBusy=true;renderAccount();try{const {data,error}=await sb.auth.signUp({email,password,options:{data:{username},emailRedirectTo:location.href.split('#')[0]}});if(error)throw error;if(!data.user)throw new Error('signup');markAccountCreated();if(data.session){const synced=await activateSession(data.user);toast(synced?'Compte créé · sauvegarde sécurisée activée.':'Compte créé · synchronisation en attente.')}else{const hint=document.getElementById('authHint');if(hint)hint.textContent='Compte créé. Ouvre le lien reçu par e-mail pour confirmer ton adresse et activer la synchronisation.';toast('E-mail de confirmation envoyé.')}}catch(error){toast(authErrorMessage(error))}finally{authBusy=false;renderAccount()}
 }
 async function loginAccount(){
  if(authBusy)return;if(!sb){toast('Compte indisponible pour le moment.');return}const email=document.getElementById('emailInput').value.trim(),password=document.getElementById('passwordInput').value;if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||password.length<8){toast('Entre ton adresse e-mail et ton mot de passe.');return}
@@ -527,7 +533,7 @@ function claimAchievement(id){
 }
 function prestige(){const target=ascensionTarget();if(!ascensionReady()){toast('⛏️ Ascension : 10 bâtiments de chaque type sur les 32 planètes sont requis');return}if(state.runTotal<target)return;const keep={lifetimeTotal:state.lifetimeTotal,prestige:state.prestige+1,crystals:state.crystals,research:{...state.research},xp:state.xp,level:state.level,clicks:state.clicks,spent:state.spent,account:state.account,achievements:[...state.achievements],quests:JSON.parse(JSON.stringify(state.quests||{}))};state=Object.assign(fresh(),keep);ensureQuests();for(const q of QUESTS)if(['build','rate','world','planetbuild'].includes(q[3])){const slot=state.quests[q[0]];if(q[3]==='planetbuild')slot.baseByWorld={};else slot.base=questRawValue(q)}save();toast('Ascension réussie');render()}
 
-document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.nav){nav(b.dataset.nav);return}if(b.id==='mineBtn'){mine();return}if(b.dataset.buy!==undefined){buyBuilding(Number(b.dataset.buy));return}if(b.dataset.tech){buyTech(b.dataset.tech);return}if(b.dataset.quest){claimQuest(b.dataset.quest);return}if(b.dataset.claim){claim(b.dataset.claim,b.dataset.claimType);return}if(b.dataset.achievement){claimAchievement(b.dataset.achievement);return}if(b.dataset.mtab){missionTab=b.dataset.mtab;document.querySelectorAll('[data-mtab]').forEach(x=>x.classList.toggle('active',x===b));renderMissions();return}if(b.id==='prestigeBtn'){prestige();return}if(b.id==='createAccount'){createAccount();return}if(b.id==='loginAccount'){loginAccount();return}if(b.id==='logoutAccount'){logout();return}if(b.id==='recoverPassword'){recoverPassword();return}if(b.id==='saveNewPassword'){saveNewPassword();return}if(b.id==='cancelPasswordRecovery'){passwordRecoveryMode=false;renderAccount();return}if(b.id==='forceSync'){syncCloud(true).then(ok=>{if(ok)toast('☁️ Sauvegarde synchronisée')});return}});
+document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.id==='reminderLater'){dismissAccountReminder();return}if(b.id==='reminderCreateAccount'||b.id==='reminderLoginAccount'){closeAccountReminder();nav('account');document.getElementById('emailInput')?.focus({preventScroll:true});return}if(b.dataset.nav){nav(b.dataset.nav);return}if(b.id==='mineBtn'){mine();return}if(b.dataset.buy!==undefined){buyBuilding(Number(b.dataset.buy));return}if(b.dataset.tech){buyTech(b.dataset.tech);return}if(b.dataset.quest){claimQuest(b.dataset.quest);return}if(b.dataset.claim){claim(b.dataset.claim,b.dataset.claimType);return}if(b.dataset.achievement){claimAchievement(b.dataset.achievement);return}if(b.dataset.mtab){missionTab=b.dataset.mtab;document.querySelectorAll('[data-mtab]').forEach(x=>x.classList.toggle('active',x===b));renderMissions();return}if(b.id==='prestigeBtn'){prestige();return}if(b.id==='createAccount'){createAccount();return}if(b.id==='loginAccount'){loginAccount();return}if(b.id==='logoutAccount'){logout();return}if(b.id==='recoverPassword'){recoverPassword();return}if(b.id==='saveNewPassword'){saveNewPassword();return}if(b.id==='cancelPasswordRecovery'){passwordRecoveryMode=false;renderAccount();return}if(b.id==='forceSync'){syncCloud(true).then(ok=>{if(ok)toast('☁️ Sauvegarde synchronisée')});return}});
 setInterval(()=>{ensureDaily();ensureWeekly();ensureQuests();checkEvent();checkAchievements();if(state.clickStreak&&Date.now()-state.lastClickAt>2200){state.clickStreak=0;}const passiveGain=autoRate()/4;if(passiveGain>0){earn(passiveGain);save(true)}else save(false);if(document.visibilityState==='visible')render();},250);
 setInterval(()=>{if(state.account)syncCloud(false)},60000);
 window.addEventListener('online',()=>{if(state.account){cloudLastError='';cloudRetryAt=0;setCloudMessage('Connexion rétablie · synchronisation en cours.');syncCloud(true)}});
@@ -539,7 +545,7 @@ if(sb)sb.auth.onAuthStateChange((event,session)=>{
   if(state.account)state.lastAccountUserId=state.account.userId;state.account=null;cloudRestoreDone=false;cloudDirty=false;cloudRetryAt=0;cloudLastError='';setCloudMessage('Déconnecté · progression conservée sur cet appareil.');save(false);render();return
  }
  if(session?.user&&(!state.account||state.account.userId!==session.user.id||(event==='INITIAL_SESSION'&&!cloudRestoreDone)))setTimeout(()=>activateSession(session.user),0)
-});ensureQuests();const offlineGain=claimOffline();if(!state.event.nextAt)scheduleEvent();checkEvent();checkAchievements();render();
+});ensureQuests();const offlineGain=claimOffline();if(!state.event.nextAt)scheduleEvent();checkEvent();checkAchievements();render();setTimeout(openAccountReminder,1400);
 
 document.addEventListener('visibilitychange',()=>{
  if(document.hidden){state.lastAt=Date.now();save();if(state.account)syncCloud(true)}
