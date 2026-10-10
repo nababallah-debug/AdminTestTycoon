@@ -2,22 +2,22 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
   <meta name="theme-color" content="#05070d">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Space Mining Tycoon — V4.2</title>
-  <link rel="icon" href="favicon.svg?v=4.2" type="image/svg+xml">
+  <title>Space Mining Tycoon — V4.3</title>
+  <link rel="icon" href="favicon.svg?v=4.3" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="style.css?v=4.2">
+  <link rel="stylesheet" href="style.css?v=4.3">
 </head>
 <body>
   <div id="app">
     <header class="topbar">
       <button class="brand" data-nav="control">
         <span class="brand-mark">◉</span>
-        <span><b>SPACE MINING</b><small>TYCOON // V4.2</small></span>
+        <span><b>SPACE MINING</b><small>TYCOON // V4.3</small></span>
       </button>
       <div class="top-stats">
         <span>CRÉDITS <b id="money">0</b></span>
@@ -32,7 +32,7 @@
         <div class="hero-space">
           <div class="stars"></div><div class="nebula"></div>
           <div class="orbit orbit-a"></div><div class="orbit orbit-b"></div>
-          <div class="planet-hero">🌑</div>
+          <div id="planetHero" class="planet-hero">🌑</div>
           <div class="sector-label"><small>SECTEUR ACTIF</small><h1 id="sectorName">Astéroïde Nova</h1><p id="sectorMeta">Indice industriel ×1</p></div>
           <div class="hero-economy"><span>TRÉSORERIE</span><strong id="heroMoney">0</strong><small id="heroIncome">+0 / sec</small></div>
           <div id="clickFx" class="click-fx" aria-hidden="true"></div>
@@ -149,6 +149,6 @@
   </div>
   <div id="toast"></div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="game.js?v=4.2"></script>
+  <script src="game.js?v=4.3"></script>
 </body>
 </html>
