@@ -85,15 +85,14 @@ const QUESTS=[
  ['investor','Investisseur','Dépenser des crédits','spend',1000000,2.3],
  ['planet','Maître de colonie','Construire sur la planète active','planetbuild',10,2.1]
 ];
-function questLevel(id){const slot=state.quests?.[id]||{};const savedLevel=Math.max(1,Math.floor(Number(slot.level)||1));const claimed=Math.max(0,Math.floor(Number(slot.completed)||0));return Math.min(100000,Math.max(savedLevel,claimed+1))}
-function questNeed(q){
- const lv=questLevel(q[0]);
+function normalizedQuestLevel(slot){const savedLevel=Math.max(1,Math.floor(Number(slot?.level)||1));const claimed=Math.max(0,Math.floor(Number(slot?.completed)||0));return Math.min(100000,Math.max(savedLevel,claimed+1))}
+function questLevel(id){return normalizedQuestLevel(state.quests?.[id])}
+function questNeed(q,lv=questLevel(q[0])){
  return Math.min(Number.MAX_SAFE_INTEGER,Math.max(1,Math.ceil(q[4]*Math.pow(q[5],lv-1))));
 }
-function questReward(q){
- const lv=questLevel(q[0]);
+function questReward(q,lv=questLevel(q[0])){
  const planet=Math.max(1,selectedWorld+1);
- return Math.min(Number.MAX_SAFE_INTEGER,Math.ceil(questNeed(q)*0.22*Math.pow(1.35,lv-1)*Math.pow(1.18,planet-1)));
+ return Math.min(Number.MAX_SAFE_INTEGER,Math.ceil(questNeed(q,lv)*0.22*Math.pow(1.35,lv-1)*Math.pow(1.18,planet-1)));
 }
 function questRawValue(q,world=selectedWorld){
  switch(q[3]){
@@ -120,20 +119,21 @@ function ensureQuests(){
   if(!slot||typeof slot!=='object')state.quests[q[0]]={level:1,completed:0,base:0,baseByWorld:{}};
   else{
    slot.completed=Math.max(0,Math.floor(Number(slot.completed)||0));
-   slot.level=Math.min(100000,Math.max(1,Math.floor(Number(slot.level)||1),slot.completed+1));
+   slot.level=normalizedQuestLevel(slot);
    slot.base=Math.max(0,Number(slot.base)||0);
    slot.baseByWorld=slot.baseByWorld&&typeof slot.baseByWorld==='object'?slot.baseByWorld:{};
   }
  }
 }
 function questDone(q){return questValue(q)>=questNeed(q)}
-function claimQuest(id){
+function claimQuest(id,shownLevel=null){
  ensureQuests();
  const q=QUESTS.find(x=>x[0]===id);if(!q)return;
+ const completedLevel=questLevel(id);
+ if(shownLevel!==null&&Number(shownLevel)!==completedLevel){render();return}
  if(!questDone(q))return;
  const slot=state.quests[id];
- const completedLevel=questLevel(id);
- const reward=questReward(q);
+ const reward=questReward(q,completedLevel);
  slot.level=Math.min(100000,completedLevel+1);
  slot.completed=completedLevel;
  earn(reward);
@@ -146,8 +146,8 @@ function renderQuests(){
  const box=document.getElementById('missionList');if(!box)return;
  ensureQuests();
  box.innerHTML=QUESTS.map(q=>{
-  const lv=questLevel(q),need=questNeed(q),value=questValue(q),done=value>=need,reward=questReward(q),pct=Math.min(100,value/Math.max(1,need)*100);
-  return `<article class="mission quest-card"><div class="mission-head"><strong>${done?'●':'○'} ${q[1]} <small>NIVEAU ${lv}</small></strong><b>+${fmt(reward)}</b></div><small>${q[2]} · ${fmt(value)} / ${fmt(need)} · bonus planète ×${Math.pow(1.18,selectedWorld).toFixed(2)}</small><div class="bar"><i style="width:${pct}%"></i></div><button class="${done?'primary':'secondary'}" data-quest="${q[0]}" ${done?'':'disabled'}>${done?'TERMINER LE NIVEAU '+lv+' · DÉBLOQUER '+(lv+1):'EN COURS · NIVEAU '+lv}</button></article>`;
+  const lv=questLevel(q[0]),need=questNeed(q,lv),value=questValue(q),done=value>=need,reward=questReward(q,lv),pct=Math.min(100,value/Math.max(1,need)*100);
+  return `<article class="mission quest-card"><div class="mission-head"><strong>${done?'●':'○'} ${q[1]} <small>NIVEAU ${lv}</small></strong><b>+${fmt(reward)}</b></div><small>${q[2]} · ${fmt(value)} / ${fmt(need)} · bonus planète ×${Math.pow(1.18,selectedWorld).toFixed(2)}</small><div class="bar"><i style="width:${pct}%"></i></div><button class="${done?'primary':'secondary'}" data-quest="${q[0]}" data-quest-level="${lv}" ${done?'':'disabled'}>${done?'TERMINER LE NIVEAU '+lv+' · DÉBLOQUER '+(lv+1):'EN COURS · NIVEAU '+lv}</button></article>`;
  }).join('');
 }
 
@@ -238,7 +238,8 @@ function checkAchievements(){
 }
 
 let state=load();
-let selectedWorld=Math.max(0,Math.min(WORLDS.length-1,Number(localStorage.getItem('sm-v2-world')||0)));
+let selectedWorld=Math.max(0,Math.min(WORLDS.length-1,Number(localStorage.getItem('sm-v2-world')??state.activeWorld??0)));
+state.activeWorld=selectedWorld;
 let screen='control';let missionTab='daily';let accountBusy=false;
 const ACCOUNT_CREATED_KEY='space-mining-account-created';
 let accountReminderDismissed=false;
@@ -249,7 +250,7 @@ function dismissAccountReminder(){accountReminderDismissed=true;closeAccountRemi
 
 function fresh(){
  const buildings={};WORLDS.forEach((_,w)=>BUILDING_ROLES.forEach((_,b)=>buildings[w+'-'+b]=0));
- return {money:0,runTotal:0,lifetimeTotal:0,prestige:0,crystals:0,buildings,research:{},xp:0,level:1,clicks:0,spent:0,
+ return {money:0,runTotal:0,lifetimeTotal:0,prestige:0,crystals:0,buildings,research:{},xp:0,level:1,clicks:0,spent:0,activeWorld:0,
 daily:{key:dateKey(),claimed:[],base:{clicks:0,lifetime:0,spent:0,buildings:0}},
 weekly:{key:weekKey(),claimed:[],base:{clicks:0,lifetime:0,run:0,spent:0,buildings:0,tech:0,world:1}},
 campaignClaimed:[],
@@ -267,6 +268,7 @@ z.clickStreak=Number(z.clickStreak)||0;z.lastClickAt=Number(z.lastClickAt)||0;z.
 z.event=Object.assign({id:null,activeUntil:0,nextAt:0},z.event||{});
 z.offlineLast=Number(z.offlineLast)||0;
 z.lastAt=Number(z.lastAt)||Date.now();
+ z.activeWorld=Math.max(0,Math.min(WORLDS.length-1,Math.floor(Number(z.activeWorld)||0)));
  z.account=z.account&&typeof z.account==='object'?z.account:null;
  z.lastAccountUserId=z.lastAccountUserId||z.account?.userId||null;
  const oldUnlocked=[0];for(let w=1;w<WORLDS.length;w++)if(BUILDING_ROLES.every((_,b)=>(Number(z.buildings[(w-1)+'-'+b])||0)>=1))oldUnlocked.push(w);
@@ -337,7 +339,7 @@ function renderBuildings(){
 function renderMap(){
  const box=document.getElementById('galaxyMap');if(!box)return;box.innerHTML='<div class="map-grid-lines"></div><div class="galaxy-core">✦</div>';
  const cols=8,rows=4;
- WORLDS.forEach((w,i)=>{const col=i%cols,row=Math.floor(i/cols);const el=document.createElement('button');el.className='sector-node '+(i===selectedWorld?'active ':'')+(worldUnlocked(i)?'':'locked');el.style.setProperty('--col',col+1);el.style.setProperty('--row',row+1);el.innerHTML=`<span>${w[0]}</span><small>${String(i+1).padStart(2,'0')} · ${w[1]}</small><em>×${w[3]}</em>`;el.onclick=()=>{if(worldUnlocked(i)){selectedWorld=i;if(!state.seenWorlds.includes(i))state.seenWorlds.push(i);localStorage.setItem('sm-v2-world',i);save();render()}else toast('Secteur verrouillé')};box.appendChild(el)});
+ WORLDS.forEach((w,i)=>{const col=i%cols,row=Math.floor(i/cols);const el=document.createElement('button');el.className='sector-node '+(i===selectedWorld?'active ':'')+(worldUnlocked(i)?'':'locked');el.style.setProperty('--col',col+1);el.style.setProperty('--row',row+1);el.innerHTML=`<span>${w[0]}</span><small>${String(i+1).padStart(2,'0')} · ${w[1]}</small><em>×${w[3]}</em>`;el.onclick=()=>{if(worldUnlocked(i)){selectedWorld=i;state.activeWorld=i;if(!state.seenWorlds.includes(i))state.seenWorlds.push(i);localStorage.setItem('sm-v2-world',i);save();render()}else toast('Secteur verrouillé')};box.appendChild(el)});
  const w=WORLDS[selectedWorld];document.getElementById('sectorDetail').innerHTML=`<div class="panel-title"><b>${w[0]} ${w[1]}</b><span style="margin-left:auto">×${w[3]}</span></div><p class="hint">Secteur ${selectedWorld+1}/${WORLDS.length} · Développement ${Math.round(worldProgress(selectedWorld)/(BUILDING_ROLES.length*20)*100)}% · Indice industriel ×${worldFactor(selectedWorld).toFixed(2)} · ${worldUnlocked(selectedWorld)?'SECTEUR ACTIF':'VERROUILLÉ'}</p>`;
 }
 function renderTech(){
@@ -419,10 +421,11 @@ async function activateSession(user){
  const account=accountForUser(user);if(!allowLocalMerge){state=fresh();state.account=account;state.lastAccountUserId=uid;save(false)}else{state.account=account;state.lastAccountUserId=uid;save(false)}
  cloudRestoreDone=false;cloudDirty=false;cloudSyncFailures=0;cloudRetryAt=0;cloudLastError='';render();
  const restored=await restoreCloud(allowLocalMerge);
+ if(restored){selectedWorld=Math.max(0,Math.min(WORLDS.length-1,Math.floor(Number(state.activeWorld)||0)));try{localStorage.setItem('sm-v2-world',String(selectedWorld))}catch{}render()}
  if(restored&&cloudDirty)await syncCloud(true);
  return restored
 }
-function authPayload(snapshot){return {nickname:state.account?.username||'Mineur',total:Number(snapshot.lifetimeTotal)||0,prestige:Number(snapshot.prestige)||0,level:Number(snapshot.level)||1,xp:Number(snapshot.xp)||0,state:snapshot}}
+function authPayload(snapshot){return {nickname:state.account?.username||'Mineur',total:Number(snapshot.lifetimeTotal)||0,prestige:Number(snapshot.prestige)||0,level:Number(snapshot.level)||1,xp:Number(snapshot.xp)||0,state:{...snapshot,activeWorld:selectedWorld}}}
 async function getCloudSession(){if(!sb)return null;const {data,error}=await sb.auth.getSession();if(error)throw error;return data?.session||null}
 async function syncCloud(force=false){
  if(!sb||!state.account?.userId||cloudBusy)return false;if(typeof navigator!=='undefined'&&navigator.onLine===false){setCloudMessage('Hors ligne · la partie est conservée ici.');return false}if(!force&&Date.now()<cloudRetryAt)return false;if(!force&&Date.now()-lastCloudSync<CLOUD_SYNC_MS)return true;
@@ -447,7 +450,7 @@ async function restoreCloud(allowLocalMerge=true){
  try{
   const session=await getCloudSession();if(!session||session.user.id!==account.userId)throw new Error('session');const {data,error}=await sb.from(CLOUD_TABLE).select('state,updated_at').eq('user_id',account.userId).maybeSingle();if(error)throw error;
   if(data?.state&&typeof data.state==='object'){
-   const localSnapshot=cloneState(state),remote=migrate(data.state);const merged=allowLocalMerge?mergeSnapshots(localSnapshot,remote):remote;merged.account=account;merged.lastAccountUserId=account.userId;merged.cloudMeta=Object.assign({},merged.cloudMeta,{lastPulledAt:Date.now()});
+   const localSnapshot=cloneState(state),remote=migrate(data.state);if(data.state.activeWorld===undefined)remote.activeWorld=selectedWorld;const merged=allowLocalMerge?mergeSnapshots(localSnapshot,remote):remote;merged.account=account;merged.lastAccountUserId=account.userId;merged.cloudMeta=Object.assign({},merged.cloudMeta,{lastPulledAt:Date.now()});
    cloudDirty=allowLocalMerge&&JSON.stringify(comparableSave(merged))!==JSON.stringify(comparableSave(remote));state=merged;save(false);lastCloudSync=Date.now();cloudRestoreDone=true;cloudLastError='';setCloudMessage(cloudDirty?'Parties réunies · envoi des changements en attente.':'Progression cloud restaurée.');render();return true
   }
   if(!allowLocalMerge&&!stateHasProgress(state)){const accountNow=state.account;state=fresh();state.account=accountNow;state.lastAccountUserId=account.userId}
@@ -468,7 +471,7 @@ async function recoverPassword(){if(!sb){toast('Compte indisponible pour le mome
 async function saveNewPassword(){const password=document.getElementById('newPasswordInput').value;if(password.length<8){toast('Choisis un mot de passe d’au moins 8 caractères.');return}try{const {data,error}=await sb.auth.updateUser({password});if(error)throw error;passwordRecoveryMode=false;document.getElementById('newPasswordInput').value='';if(data?.user)await activateSession(data.user);toast('Mot de passe mis à jour.')}catch(error){toast(authErrorMessage(error))}finally{renderAccount()}}
 async function loadLeaderboard(force=false){
  const box=document.getElementById('leaderboardList');if(!box||!sb||leaderboardBusy||(!force&&Date.now()-lastLeaderboard<30000))return;leaderboardBusy=true;box.innerHTML='<p class="hint">Chargement du classement…</p>';
- try{const {data,error}=await sb.from('leaderboard').select('nickname,total,prestige,level').order('total',{ascending:false}).order('prestige',{ascending:false}).order('level',{ascending:false}).limit(10);if(error)throw error;lastLeaderboard=Date.now();box.innerHTML=data?.length?data.map((player,index)=>`<div class="rank-row"><b>#${index+1}</b><span>${escapeHTML(player.nickname||'Mineur')}</span><strong>${fmt(Number(player.total||0))}</strong><small>P${player.prestige||0} · N${player.level||1}</small></div>`).join(''):'<p class="hint">Aucun commandant classé pour le moment.</p>'}catch(error){box.innerHTML='<p class="hint">Classement momentanément indisponible.</p>';console.warn('Leaderboard',error)}finally{leaderboardBusy=false}
+ try{const {data,error}=await sb.from('leaderboard').select('nickname,total,prestige,level,planet').order('total',{ascending:false}).order('prestige',{ascending:false}).order('level',{ascending:false}).limit(10);if(error)throw error;lastLeaderboard=Date.now();box.innerHTML=data?.length?data.map((player,index)=>{const planet=WORLDS[Math.max(0,Math.min(WORLDS.length-1,Math.floor(Number(player.planet||1))-1))][1];return `<div class="rank-row"><b>#${index+1}</b><span>${escapeHTML(player.nickname||'Mineur')}</span><strong>${fmt(Number(player.total||0))}</strong><small>P${player.prestige||0} · N${player.level||1} · ${escapeHTML(planet)}</small></div>`}).join(''):'<p class="hint">Aucun commandant classé pour le moment.</p>'}catch(error){box.innerHTML='<p class="hint">Classement momentanément indisponible.</p>';console.warn('Leaderboard',error)}finally{leaderboardBusy=false}
 }
 function escapeHTML(value){return String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]))}
 async function logout(){if(!state.account)return;try{if(cloudDirty){const synced=await syncCloud(true);if(!synced){toast('Synchronisation impossible · tu restes connecté et ta partie est conservée.');return}}if(sb){const {error}=await sb.auth.signOut({scope:'local'});if(error)throw error}if(state.account){state.lastAccountUserId=state.account.userId;state.account=null;cloudDirty=false;save(false);render();toast('Déconnexion · progression conservée localement')}}catch(error){toast(authErrorMessage(error))}}
@@ -533,7 +536,7 @@ function claimAchievement(id){
 }
 function prestige(){const target=ascensionTarget();if(!ascensionReady()){toast('⛏️ Ascension : 10 bâtiments de chaque type sur les 32 planètes sont requis');return}if(state.runTotal<target)return;const keep={lifetimeTotal:state.lifetimeTotal,prestige:state.prestige+1,crystals:state.crystals,research:{...state.research},xp:state.xp,level:state.level,clicks:state.clicks,spent:state.spent,account:state.account,achievements:[...state.achievements],quests:JSON.parse(JSON.stringify(state.quests||{}))};state=Object.assign(fresh(),keep);ensureQuests();for(const q of QUESTS)if(['build','rate','world','planetbuild'].includes(q[3])){const slot=state.quests[q[0]];if(q[3]==='planetbuild')slot.baseByWorld={};else slot.base=questRawValue(q)}save();toast('Ascension réussie');render()}
 
-document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.id==='reminderLater'){dismissAccountReminder();return}if(b.id==='reminderCreateAccount'||b.id==='reminderLoginAccount'){closeAccountReminder();nav('account');document.getElementById('emailInput')?.focus({preventScroll:true});return}if(b.dataset.nav){nav(b.dataset.nav);return}if(b.id==='mineBtn'){mine();return}if(b.dataset.buy!==undefined){buyBuilding(Number(b.dataset.buy));return}if(b.dataset.tech){buyTech(b.dataset.tech);return}if(b.dataset.quest){claimQuest(b.dataset.quest);return}if(b.dataset.claim){claim(b.dataset.claim,b.dataset.claimType);return}if(b.dataset.achievement){claimAchievement(b.dataset.achievement);return}if(b.dataset.mtab){missionTab=b.dataset.mtab;document.querySelectorAll('[data-mtab]').forEach(x=>x.classList.toggle('active',x===b));renderMissions();return}if(b.id==='prestigeBtn'){prestige();return}if(b.id==='createAccount'){createAccount();return}if(b.id==='loginAccount'){loginAccount();return}if(b.id==='logoutAccount'){logout();return}if(b.id==='recoverPassword'){recoverPassword();return}if(b.id==='saveNewPassword'){saveNewPassword();return}if(b.id==='cancelPasswordRecovery'){passwordRecoveryMode=false;renderAccount();return}if(b.id==='forceSync'){syncCloud(true).then(ok=>{if(ok)toast('☁️ Sauvegarde synchronisée')});return}});
+document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.id==='reminderLater'){dismissAccountReminder();return}if(b.id==='reminderCreateAccount'||b.id==='reminderLoginAccount'){closeAccountReminder();nav('account');document.getElementById('emailInput')?.focus({preventScroll:true});return}if(b.dataset.nav){nav(b.dataset.nav);return}if(b.id==='mineBtn'){mine();return}if(b.dataset.buy!==undefined){buyBuilding(Number(b.dataset.buy));return}if(b.dataset.tech){buyTech(b.dataset.tech);return}if(b.dataset.quest){claimQuest(b.dataset.quest,b.dataset.questLevel);return}if(b.dataset.claim){claim(b.dataset.claim,b.dataset.claimType);return}if(b.dataset.achievement){claimAchievement(b.dataset.achievement);return}if(b.dataset.mtab){missionTab=b.dataset.mtab;document.querySelectorAll('[data-mtab]').forEach(x=>x.classList.toggle('active',x===b));renderMissions();return}if(b.id==='prestigeBtn'){prestige();return}if(b.id==='createAccount'){createAccount();return}if(b.id==='loginAccount'){loginAccount();return}if(b.id==='logoutAccount'){logout();return}if(b.id==='recoverPassword'){recoverPassword();return}if(b.id==='saveNewPassword'){saveNewPassword();return}if(b.id==='cancelPasswordRecovery'){passwordRecoveryMode=false;renderAccount();return}if(b.id==='forceSync'){syncCloud(true).then(ok=>{if(ok)toast('☁️ Sauvegarde synchronisée')});return}});
 setInterval(()=>{ensureDaily();ensureWeekly();ensureQuests();checkEvent();checkAchievements();if(state.clickStreak&&Date.now()-state.lastClickAt>2200){state.clickStreak=0;}const passiveGain=autoRate()/4;if(passiveGain>0){earn(passiveGain);save(true)}else save(false);if(document.visibilityState==='visible')render();},250);
 setInterval(()=>{if(state.account)syncCloud(false)},60000);
 window.addEventListener('online',()=>{if(state.account){cloudLastError='';cloudRetryAt=0;setCloudMessage('Connexion rétablie · synchronisation en cours.');syncCloud(true)}});
