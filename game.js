@@ -3,7 +3,7 @@ const SUPABASE_KEY='sb_publishable_moYDSTJplgl9XPCiKR96bQ_CPt3MJ7z';
 const sb=window.supabase?.createClient?.(SUPABASE_URL,SUPABASE_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true}})||null;
 
 const KEY='space-mining-v2-test';
-const CLOUD_SYNC_MS=12000;
+const CLOUD_SYNC_MS=55000;
 const CLOUD_TABLE='player_state';
 let cloudBusy=false,cloudRestoreBusy=false,lastCloudSync=0,lastLeaderboard=0,leaderboardBusy=false;
 let cloudDirty=false,cloudRetryAt=0,cloudRestoreDone=false,cloudSyncFailures=0;
@@ -21,6 +21,9 @@ const WORLDS=[
  ['♾️','Nexus Infini',5e90,20000],['🪩','Mégasphère',2e94,28000],['🛸','Frontière Omniverselle',1e98,40000],
  ['🌌','Mer des Univers',5e101,56000],['✨','Trône de la Création',1e105,80000]
 ];
+const MINE_ACCENTS=[[99,199,255],[255,112,84],[230,190,112],[81,213,255],[174,125,255],[255,196,79],[159,126,255],[71,191,217],[107,230,219],[158,205,246],[218,119,255],[123,174,255],[255,137,102],[167,112,231],[255,218,108],[120,184,255],[255,111,66],[149,137,202],[111,151,255],[130,199,255],[99,221,255],[183,204,255],[255,132,201],[179,236,255],[105,223,185],[187,169,255],[255,156,103],[128,255,220],[255,151,217],[145,201,255],[97,204,242],[255,224,145]];
+let renderedMineWorld=-1;
+function updateMinePlanetTheme(){if(renderedMineWorld===selectedWorld)return;renderedMineWorld=selectedWorld;const rgb=MINE_ACCENTS[selectedWorld]||MINE_ACCENTS[0],button=document.getElementById('mineBtn'),planet=document.getElementById('planetHero');if(button){button.style.setProperty('--mine-rgb',rgb.join(','));button.dataset.world=String(selectedWorld);button.setAttribute('aria-label','Extraire des crédits sur '+WORLDS[selectedWorld][1])}if(planet)planet.textContent=WORLDS[selectedWorld][0]}
 
 const BUILDING_ROLES=[
  ['extracteur','Extracteur','⛏️'],['mineur','Mineur','🤖'],['raffinerie','Raffinerie','🏭'],['station','Station','🛰️'],
@@ -312,6 +315,7 @@ function setNavAlert(id,on){const el=document.getElementById(id);if(el)el.hidden
 function renderNavAlerts(){setNavAlert('navAlertSectors',hasSectorAlert());setNavAlert('navAlertTech',hasTechAlert());setNavAlert('navAlertMissions',hasMissionAlert());setNavAlert('navAlertPrestige',hasPrestigeAlert())}
 function render(){
  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};
+ updateMinePlanetTheme();
  set('money',fmt(state.money));set('rate',fmt(autoRate())+'/s');set('prestige','P'+state.prestige);set('accountName',state.account?.username||'Mineur');
  set('heroMoney',fmt(state.money));set('heroIncome','+'+fmt(autoRate())+' / sec');set('clickPower',fmt(clickPower()));set('sectorName',WORLDS[selectedWorld][1]);set('sectorMeta','Indice industriel ×'+worldFactor(selectedWorld).toFixed(2));
  set('buildingCount',totalBuildings());set('sectorProgress',WORLDS.filter((_,i)=>worldUnlocked(i)).length+' / '+WORLDS.length);set('techProgress',Object.keys(state.research).length);set('missionProgress',CAMPAIGN.filter(m=>missionValue(m)>=m[3]).length);set('buildingSector',WORLDS[selectedWorld][1]);set('sectorCount',WORLDS.filter((_,i)=>worldUnlocked(i)).length+' / '+WORLDS.length);set('techCount',Object.values(BRANCHES).reduce((a,b)=>a+b.length,0)+' technologies');
@@ -525,7 +529,7 @@ function prestige(){const target=ascensionTarget();if(!ascensionReady()){toast('
 
 document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.nav){nav(b.dataset.nav);return}if(b.id==='mineBtn'){mine();return}if(b.dataset.buy!==undefined){buyBuilding(Number(b.dataset.buy));return}if(b.dataset.tech){buyTech(b.dataset.tech);return}if(b.dataset.quest){claimQuest(b.dataset.quest);return}if(b.dataset.claim){claim(b.dataset.claim,b.dataset.claimType);return}if(b.dataset.achievement){claimAchievement(b.dataset.achievement);return}if(b.dataset.mtab){missionTab=b.dataset.mtab;document.querySelectorAll('[data-mtab]').forEach(x=>x.classList.toggle('active',x===b));renderMissions();return}if(b.id==='prestigeBtn'){prestige();return}if(b.id==='createAccount'){createAccount();return}if(b.id==='loginAccount'){loginAccount();return}if(b.id==='logoutAccount'){logout();return}if(b.id==='recoverPassword'){recoverPassword();return}if(b.id==='saveNewPassword'){saveNewPassword();return}if(b.id==='cancelPasswordRecovery'){passwordRecoveryMode=false;renderAccount();return}if(b.id==='forceSync'){syncCloud(true).then(ok=>{if(ok)toast('☁️ Sauvegarde synchronisée')});return}});
 setInterval(()=>{ensureDaily();ensureWeekly();ensureQuests();checkEvent();checkAchievements();if(state.clickStreak&&Date.now()-state.lastClickAt>2200){state.clickStreak=0;}const passiveGain=autoRate()/4;if(passiveGain>0){earn(passiveGain);save(true)}else save(false);if(document.visibilityState==='visible')render();},250);
-setInterval(()=>{if(state.account&&cloudDirty)syncCloud(false)},3000);
+setInterval(()=>{if(state.account)syncCloud(false)},60000);
 window.addEventListener('online',()=>{if(state.account){cloudLastError='';cloudRetryAt=0;setCloudMessage('Connexion rétablie · synchronisation en cours.');syncCloud(true)}});
 window.addEventListener('offline',()=>{if(state.account)setCloudMessage('Hors ligne · les changements restent en attente.')});
 if(sb)sb.auth.onAuthStateChange((event,session)=>{
