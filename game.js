@@ -294,9 +294,9 @@ function worldFactor(w){const p=Math.min(1,worldProgress(w)/(BUILDING_ROLES.leng
 function cost(w,b){
  const n=state.buildings[w+'-'+b]||0;
  // V2.5 : seuls les 4 premiers bâtiments du premier secteur ont un équilibrage spécial.
- if(w===0 && b<4){const bases=[1500,6000,24000,96000];return Math.ceil(bases[b]*Math.pow(1.16,n)*eventMult('cost'));}
+ if(w===0 && b<4){const bases=[1500,6000,24000,96000];return 5*Math.ceil(bases[b]*Math.pow(1.16,n)*eventMult('cost'));}
  const planetInflation=Math.pow(worldFactor(w),1.15);
- return Math.ceil((500*Math.pow(28,w)*Math.pow(5.5,b)*Math.pow(1.16,n))*planetInflation/5*eventMult('cost'));
+ return 5*Math.ceil((500*Math.pow(28,w)*Math.pow(5.5,b)*Math.pow(1.16,n))*planetInflation/5*eventMult('cost'));
 }
 function prestigeMult(){return 1+.18*state.prestige}
 function techOwned(id){return !!state.research[id]}
